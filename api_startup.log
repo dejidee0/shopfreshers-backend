@@ -1,0 +1,6 @@
+Using launch settings from ShopFresherz.API\Properties\launchSettings.json...
+Building...
+C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Infrastructure\ShopFresherz.Infrastructure.csproj : warning NU1902: Package 'SixLabors.ImageSharp' 3.1.7 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-rxmq-m78w-7wmc [C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.API\ShopFresherz.API.csproj]
+C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Application\ShopFresherz.Application.csproj : warning NU1903: Package 'AutoMapper' 12.0.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-rvv3-g6hj-g44x [C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.API\ShopFresherz.API.csproj]
+C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Infrastructure\ShopFresherz.Infrastructure.csproj : warning NU1902: Package 'SixLabors.ImageSharp' 3.1.7 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-rxmq-m78w-7wmc
+c:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Application\ShopFresherz.Application.csproj : warning NU1903: Package 'AutoMapper' 12.0.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-rvv3-g6hj-g44x [C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Application\ShopFresherz.Application.csproj]

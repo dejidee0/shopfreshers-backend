@@ -1,0 +1,33 @@
+Using launch settings from ShopFresherz.API\Properties\launchSettings.json...
+[16:01:25 INF] Executed DbCommand (401ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT 1
+[16:01:26 INF] Executed DbCommand (387ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+[16:01:26 INF] Executed DbCommand (539ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT 1
+[16:01:27 INF] Executed DbCommand (343ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+[16:01:27 INF] Executed DbCommand (451ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+[16:01:28 INF] User profile is available. Using 'C:\Users\Dell\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+[16:01:28 INF] Now listening on: http://localhost:5207
+[16:01:28 INF] Application started. Press Ctrl+C to shut down.
+[16:01:28 INF] Hosting environment: Development
+[16:01:28 INF] Content root path: C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.API
+[16:02:11 INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - null null
+[16:02:12 INF] HTTP GET /swagger/v1/swagger.json responded 200 in 1146.1618 ms
+[16:02:12 INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 1605.9321ms
+[16:02:27 INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - null null
+[16:02:27 INF] HTTP GET /swagger/v1/swagger.json responded 200 in 256.8113 ms
+[16:02:27 INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 261.8553ms
+[16:05:38 INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/index.html - null null
+[16:05:40 INF] HTTP GET /swagger/index.html responded 200 in 1202.3906 ms
+[16:05:40 INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/index.html - 200 null text/html;charset=utf-8 1326.8539ms
+[16:05:40 INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/index.js - null null
+[16:05:40 INF] HTTP GET /swagger/index.js responded 200 in 2.0722 ms
+[16:05:40 INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/index.js - 200 null application/javascript;charset=utf-8 4.9315ms
+[16:05:43 INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - null null
+[16:05:45 INF] HTTP GET /swagger/v1/swagger.json responded 200 in 2097.4102 ms
+[16:05:45 INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 2208.3365ms

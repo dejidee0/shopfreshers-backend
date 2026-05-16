@@ -1,0 +1,810 @@
+================================================================================
+                        SHOPFRESHERZ API HANDOVER
+                    Clean Architecture ASP.NET Core 8
+================================================================================
+
+================================================================================
+SECTION 1: PROJECT OVERVIEW
+================================================================================
+
+Project Name   : ShopFresherz Backend API
+Description    : Clean Architecture ASP.NET Core 8 REST API for a Nigerian
+                 tech/gadgets e-commerce platform. Built with CQRS (MediatR),
+                 EF Core, and layered domain/application/infrastructure design.
+Live Base URL  : http://shopfresherz-001-site1.jtempurl.com/api/v1
+Swagger UI     : http://shopfresherz-001-site1.jtempurl.com/swagger
+Health Check   : http://shopfresherz-001-site1.jtempurl.com/health
+Hangfire Dash  : http://shopfresherz-001-site1.jtempurl.com/hangfire
+Vercel Frontend: https://shopfresherz.vercel.app
+
+Tech Stack:
+  - Framework    : ASP.NET Core 8 (C# 12, nullable reference types)
+  - Database     : Microsoft SQL Server
+  - ORM          : Entity Framework Core 8 (Code First with Migrations)
+  - CQRS         : MediatR (with FluentValidation pipeline behavior)
+  - Caching      : StackExchange.Redis (falls back to IMemoryCache)
+  - Search       : Elasticsearch (falls back to SQL LIKE search)
+  - Background   : Hangfire (recurring jobs on SQL Server storage)
+  - Email        : SendGrid
+  - SMS          : Termii
+  - Payments     : Paystack (primary), Flutterwave (fallback)
+  - Images       : SixLabors.ImageSharp (resize, watermark, zoom crops)
+  - Blob Storage : Azure Blob Storage (falls back to local disk in dev)
+  - Logging      : Serilog (console + file, bootstrapped)
+  - Rate Limiting: AspNetCoreRateLimit (IP-based)
+  - Auth         : JWT RS256 (RSA 2048-bit key pair)
+
+================================================================================
+SECTION 2: AUTHENTICATION
+================================================================================
+
+Token Type     : JWT with RS256 asymmetric signing
+Access Token   : 15-minute expiry
+Refresh Token  : 7-day expiry, SHA-256 hashed before DB storage
+Key Format     : RSA PEM (private + public key pair)
+
+How to Register & Get Token:
+  1. POST /api/v1/auth/register with email, password, firstName, lastName
+  2. Response includes accessToken and refreshToken
+  3. Verify email with POST /api/v1/auth/verify-email using the 6-digit OTP
+     sent to your email (OTP cached for 10 minutes)
+
+How to Use Token:
+  Include in every authenticated request header:
+    Authorization: Bearer {accessToken}
+
+Token Refresh (when access token expires):
+  POST /api/v1/auth/refresh with { "refreshToken": "..." }
+
+Password Reset Flow:
+  1. POST /api/v1/auth/forgot-password with { "email": "user@example.com" }
+  2. System sends 6-digit OTP to email
+  3. POST /api/v1/auth/reset-password with { "email", "otp", "newPassword" }
+
+SuperAdmin Credentials (DO NOT share publicly):
+  Email   : admin@shopfresherz.com
+  Password: Admin@ShopFresherz2026!
+
+================================================================================
+SECTION 3: ALL 61 ENDPOINTS
+================================================================================
+
+AUTH (7 endpoints) -- /api/v1/auth
+──────────────────────────────────────────────────────────────────────────────
+1.  POST /api/v1/auth/register
+    Auth: No | Role: None
+    Desc: Register a new customer account and receive access + refresh tokens
+    Body: { firstName, lastName, email, phone?, password, confirmPassword }
+    Resp: 201 AuthResponse { accessToken, refreshToken, expiresAt, user }
+
+2.  POST /api/v1/auth/login
+    Auth: No | Role: None
+    Desc: Authenticate existing user and receive tokens
+    Body: { email, password }
+    Resp: 200 AuthResponse { accessToken, refreshToken, expiresAt, user }
+
+3.  POST /api/v1/auth/refresh
+    Auth: No | Role: None
+    Desc: Rotate expired access token using valid refresh token
+    Body: { refreshToken }
+    Resp: 200 AuthResponse { accessToken, refreshToken, expiresAt }
+
+4.  POST /api/v1/auth/verify-email
+    Auth: No | Role: None
+    Desc: Verify email using 6-digit OTP sent at registration
+    Body: { email, otp }
+    Resp: 204 No Content
+
+5.  POST /api/v1/auth/forgot-password
+    Auth: No | Role: None
+    Desc: Send password-reset OTP to user's email
+    Body: { email }
+    Resp: 204 No Content
+
+6.  POST /api/v1/auth/reset-password
+    Auth: No | Role: None
+    Desc: Complete password reset using OTP and new password
+    Body: { email, otp, newPassword }
+    Resp: 204 No Content
+
+7.  POST /api/v1/auth/logout
+    Auth: Yes | Role: Any authenticated
+    Desc: Revoke current user's refresh token (server-side logout)
+    Body: None
+    Resp: 204 No Content
+
+CATEGORIES (1 endpoint) -- /api/v1/categories
+──────────────────────────────────────────────────────────────────────────────
+8.  GET /api/v1/categories
+    Auth: No | Role: None
+    Desc: Get all active product categories (flat list)
+    Resp: 200 CategoryDto[] { id, parentId, name,  slug, imageUrl }
+
+BRANDS (1 endpoint) -- /api/v1/brands
+──────────────────────────────────────────────────────────────────────────────
+9.  GET /api/v1/brands
+    Auth: No | Role: None
+    Desc: Get all active product brands
+    Resp: 200 BrandDto[] { id, name, slug, logoUrl }
+
+PRODUCTS (6 endpoints) -- /api/v1/products
+──────────────────────────────────────────────────────────────────────────────
+10. GET /api/v1/products
+    Auth: No | Role: None
+    Desc: Paginated product listing with optional filters
+    Query: page, pageSize, brand, category, minPrice, maxPrice, sort, featured
+    Resp: 200 PagedResult<ProductSummaryDto>
+
+11. GET /api/v1/products/{slug}
+    Auth: No | Role: None
+    Desc: Get single product detail by slug
+    Resp: 200 ProductDetailDto (includes images, variants, reviews summary)
+
+12. POST /api/v1/products
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Create a new product
+    Body: CreateProductRequest { sku, name, slug, brandId, categoryId, ... }
+    Resp: 201 Created
+
+13. PUT /api/v1/products/{id:guid}
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Update an existing product
+    Body: UpdateProductRequest { ... }
+    Resp: 204 No Content
+
+14. DELETE /api/v1/products/{id:guid}
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Soft-delete a product
+    Resp: 204 No Content
+
+15. POST /api/v1/products/{id:guid}/images
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Upload a product image (multipart/form-data)
+    Body: IFormFile (image file)
+    Resp: 201 ProductImageDto { id, thumbUrl, displayUrl, zoomUrl, originalUrl }
+
+CART (6 endpoints) -- /api/v1/cart
+──────────────────────────────────────────────────────────────────────────────
+16. GET /api/v1/cart
+    Auth: No (uses X-Session-Id header for guest, or JWT for authenticated)
+    Desc: Get current cart contents
+    Header: X-Session-Id: {uuid} (for guest carts)
+    Resp: 200 CartDto { items[], subtotal, coupon?, deliveryFee, total }
+
+17. POST /api/v1/cart/items
+    Auth: No (X-Session-Id or JWT)
+    Desc: Add item to cart
+    Header: X-Session-Id: {uuid}
+    Body: AddToCartRequest { productId, quantity }
+    Resp: 200 CartDto
+
+18. PUT /api/v1/cart/items/{itemId:guid}
+    Auth: No (X-Session-Id or JWT)
+    Desc: Update cart item quantity
+    Header: X-Session-Id: {uuid}
+    Body: UpdateCartItemRequest { quantity }
+    Resp: 204 No Content
+
+19. DELETE /api/v1/cart/items/{itemId:guid}
+    Auth: No (X-Session-Id or JWT)
+    Desc: Remove item from cart
+    Header: X-Session-Id: {uuid}
+    Resp: 204 No Content
+
+20. POST /api/v1/cart/coupon
+    Auth: No (X-Session-Id or JWT)
+    Desc: Apply coupon to cart
+    Header: X-Session-Id: {uuid}
+    Query: couponCode=XXXX
+    Resp: 200 CouponValidationDto
+
+21. DELETE /api/v1/cart/coupon
+    Auth: No (X-Session-Id or JWT)
+    Desc: Remove coupon from cart
+    Header: X-Session-Id: {uuid}
+    Resp: 204 No Content
+
+ORDERS (4 endpoints) -- /api/v1/orders
+──────────────────────────────────────────────────────────────────────────────
+22. POST /api/v1/orders
+    Auth: No (guest checkout supported via X-Session-Id)
+    Desc: Place a new order (creates order with payment intent)
+    Header: X-Session-Id: {uuid} (for guest) or JWT
+    Body: CreateOrderRequest { items, addressId, paymentMethod, couponCode? }
+    Resp: 201 CreateOrderResponse { orderNumber, total, paymentUrl }
+
+23. GET /api/v1/orders
+    Auth: Yes | Role: Any authenticated
+    Desc: Get current user's orders (paginated)
+    Query: page, pageSize
+    Resp: 200 PagedResult<OrderDto>
+
+24. GET /api/v1/orders/{orderNumber}
+    Auth: No (public lookup by order number)
+    Desc: Get order detail by order number
+    Resp: 200 OrderDto
+
+25. POST /api/v1/orders/{orderNumber}/cancel
+    Auth: Yes | Role: Any authenticated
+    Desc: Cancel user's own order (if still cancellable)
+    Resp: 204 No Content
+
+WISHLIST (3 endpoints) -- /api/v1/wishlist
+──────────────────────────────────────────────────────────────────────────────
+26. GET /api/v1/wishlist
+    Auth: Yes | Role: Any authenticated
+    Desc: Get current user's wishlist products
+    Resp: 200 ProductSummaryDto[]
+
+27. POST /api/v1/wishlist/{productId:guid}
+    Auth: Yes | Role: Any authenticated
+    Desc: Add product to wishlist
+    Resp: 204 No Content
+
+28. DELETE /api/v1/wishlist/{productId:guid}
+    Auth: Yes | Role: Any authenticated
+    Desc: Remove product from wishlist
+    Resp: 204 No Content
+
+REVIEWS (2 endpoints) -- /api/v1/reviews
+──────────────────────────────────────────────────────────────────────────────
+29. GET /api/v1/reviews/product/{productId:guid}
+    Auth: No | Role: None
+    Desc: Get approved reviews for a product (paginated)
+    Query: page, pageSize, rating (filter by star rating)
+    Resp: 200 PagedResult<ReviewDto>
+
+30. POST /api/v1/reviews
+    Auth: Yes | Role: Any authenticated
+    Desc: Submit a product review
+    Body: CreateReviewRequest { productId, rating, title?, body }
+    Resp: 201 Created
+
+ADDRESSES (3 endpoints) -- /api/v1/addresses
+──────────────────────────────────────────────────────────────────────────────
+31. GET /api/v1/addresses
+    Auth: Yes | Role: Any authenticated
+    Desc: Get current user's saved addresses
+    Resp: 200 AddressDto[]
+
+32. POST /api/v1/addresses
+    Auth: Yes | Role: Any authenticated
+    Desc: Add a new address
+    Body: CreateAddressRequest { fullName, phone, line1, line2?, city, state, isDefault }
+    Resp: 201 Created
+
+33. DELETE /api/v1/addresses/{id:guid}
+    Auth: Yes | Role: Any authenticated
+    Desc: Delete user's own address
+    Resp: 204 No Content
+
+ACCOUNT (5 endpoints) -- /api/v1/account
+──────────────────────────────────────────────────────────────────────────────
+34. GET /api/v1/account/profile
+    Auth: Yes | Role: Any authenticated
+    Desc: Get current user's profile
+    Resp: 200 UserProfileDto
+
+35. PUT /api/v1/account/profile
+    Auth: Yes | Role: Any authenticated
+    Desc: Update current user's profile (firstName, lastName, phone)
+    Body: UpdateProfileRequest { firstName?, lastName?, phone? }
+    Resp: 204 No Content
+
+36. PUT /api/v1/account/password
+    Auth: Yes | Role: Any authenticated
+    Desc: Change current user's password
+    Body: ChangePasswordRequest { currentPassword, newPassword }
+    Resp: 204 No Content
+
+37. GET /api/v1/account/loyalty
+    Auth: Yes | Role: Any authenticated
+    Desc: Get current user's loyalty points balance and history
+    Resp: 200 LoyaltyDto { balance, history[] }
+
+38. POST /api/v1/account/notify-me/{productId:guid}
+    Auth: Yes | Role: Any authenticated
+    Desc: Register for back-in-stock notification
+    Resp: 204 No Content
+
+PAYMENTS (2 endpoints) -- /api/v1/payments
+──────────────────────────────────────────────────────────────────────────────
+39. POST /api/v1/payments/webhook/paystack
+    Auth: No | Role: None
+    Desc: Paystack payment webhook (order status updates)
+    Body: Raw Paystack event JSON
+    Resp: 200 OK
+
+40. POST /api/v1/payments/webhook/flutterwave
+    Auth: No | Role: None
+    Desc: Flutterwave payment webhook (order status updates)
+    Body: Raw Flutterwave event JSON
+    Resp: 200 OK
+
+SEARCH (2 endpoints) -- /api/v1/search
+──────────────────────────────────────────────────────────────────────────────
+41. GET /api/v1/search
+    Auth: No | Role: None
+    Desc: Full-text product search (Elasticsearch or SQL fallback)
+    Query: q, brand, category, minPrice, maxPrice, page, pageSize, sort
+    Resp: 200 SearchResult { items[], total, facets }
+
+42. GET /api/v1/search/instant
+    Auth: No | Role: None
+    Desc: Instant search suggestions (rate-limited, cached 2 min)
+    Query: q (max 3 chars triggers instant search)
+    Resp: 200 InstantSearchResult { suggestions[], products[] }
+
+FLASH DEALS (4 endpoints) -- /api/v1/flash-deals
+──────────────────────────────────────────────────────────────────────────────
+43. GET /api/v1/flash-deals
+    Auth: No | Role: None
+    Desc: Get all active flash deals (cached 30 sec)
+    Resp: 200 FlashDealDto[] { product, salePrice, originalPrice, endsAt }
+
+44. POST /api/v1/flash-deals
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Create a new flash deal
+    Body: CreateFlashDealRequest { productId, salePrice, startsAt, endsAt, maxQuantity }
+    Resp: 201 Created
+
+45. PUT /api/v1/flash-deals/{id:guid}
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Update an existing flash deal
+    Body: UpdateFlashDealRequest { ... }
+    Resp: 204 No Content
+
+46. PATCH /api/v1/flash-deals/{id:guid}/toggle
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Toggle flash deal active/inactive
+    Query: isActive=true|false
+    Resp: 204 No Content
+
+COUPONS (4 endpoints) -- /api/v1/coupons
+──────────────────────────────────────────────────────────────────────────────
+47. GET /api/v1/coupons/validate
+    Auth: No | Role: None
+    Desc: Validate a coupon code
+    Query: code, cartTotal (optional subtotal for min order check)
+    Resp: 200 CouponValidationDto { valid, code, type, value, discountAmount }
+
+48. POST /api/v1/coupons
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Create a new coupon
+    Body: CreateCouponRequest { code, type, value, minOrderAmount?, maxUses?, expiresAt? }
+    Resp: 201 Created
+
+49. PUT /api/v1/coupons/{id:int}
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Update an existing coupon
+    Body: UpdateCouponRequest { ... }
+    Resp: 204 No Content
+
+50. DELETE /api/v1/coupons/{id:int}
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Delete a coupon
+    Resp: 204 No Content
+
+BANNERS (1 public endpoint) -- /api/v1/banners
+──────────────────────────────────────────────────────────────────────────────
+51. GET /api/v1/banners
+    Auth: No | Role: None
+    Desc: Get all active homepage banners (sorted by sortOrder)
+    Resp: 200 BannerDto[] { id, title, subTitle, imageUrl, linkUrl?, ctaText?, sortOrder }
+
+ADMIN (10 endpoints) -- /api/v1/admin
+──────────────────────────────────────────────────────────────────────────────
+52. GET /api/v1/admin/dashboard
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Get admin dashboard stats (revenue, orders, users, low stock)
+    Resp: 200 DashboardStatsDto
+
+53. GET /api/v1/admin/orders
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Get all orders across all users (paginated, filterable)
+    Query: page, pageSize, status, dateFrom, dateTo
+    Resp: 200 PagedResult<OrderDto>
+
+54. GET /api/v1/admin/users
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Get all users (paginated)
+    Query: page, pageSize, role, search
+    Resp: 200 PagedResult<AdminUserDto>
+
+55. PUT /api/v1/admin/orders/{orderNumber}/status
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Update order status (e.g., Pending -> Shipped -> Delivered)
+    Body: UpdateOrderStatusRequest { status, trackingNumber? }
+    Resp: 204 No Content
+
+56. POST /api/v1/admin/users/{userId:guid}/loyalty
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Manually adjust user's loyalty points (credit or debit)
+    Body: AdjustLoyaltyRequest { points, reason }
+    Resp: 204 No Content
+
+57. GET /api/v1/admin/inventory/low-stock
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Get products with stock below threshold (default: 10)
+    Resp: 200 LowStockDto[]
+
+58. GET /api/v1/admin/banners
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Get all banners (including inactive)
+    Resp: 200 BannerDto[]
+
+59. POST /api/v1/admin/banners
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Create a new homepage banner
+    Body: CreateBannerRequest { title, subTitle, imageUrl, linkUrl?, ctaText?, sortOrder }
+    Resp: 201 Created
+
+60. PUT /api/v1/admin/banners/{id:guid}
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Update an existing banner
+    Body: UpdateBannerRequest { ... }
+    Resp: 204 No Content
+
+61. DELETE /api/v1/admin/banners/{id:guid}
+    Auth: Yes | Role: Admin/SuperAdmin
+    Desc: Delete a banner
+    Resp: 204 No Content
+
+================================================================================
+SECTION 4: REQUEST/RESPONSE EXAMPLES
+================================================================================
+
+1. Register User:
+   curl -X POST http://shopfresherz-001-site1.jtempurl.com/api/v1/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"firstName":"John","lastName":"Doe","email":"john@example.com","phone":"+2348012345678","password":"Test@12345","confirmPassword":"Test@12345"}'
+
+2. Login:
+   curl -X POST http://shopfresherz-001-site1.jtempurl.com/api/v1/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"admin@shopfresherz.com","password":"Admin@ShopFresherz2026!"}'
+
+3. Get Categories:
+   curl http://shopfresherz-001-site1.jtempurl.com/api/v1/categories
+
+4. Get Products (with filters):
+   curl "http://shopfresherz-001-site1.jtempurl.com/api/v1/products?brand=apple&category=mobile-phones&page=1&pageSize=20&sort=newest"
+
+5. Get Product by Slug:
+   curl http://shopfresherz-001-site1.jtempurl.com/api/v1/products/apple-iphone-16-pro-max-256gb
+
+6. Add to Cart (Guest):
+   curl -X POST http://shopfresherz-001-site1.jtempurl.com/api/v1/cart/items \
+     -H "Content-Type: application/json" \
+     -H "X-Session-Id: $(uuidgen)" \
+     -d '{"productId":"GUID-HERE","quantity":1}'
+
+7. Place Order:
+   curl -X POST http://shopfresherz-001-site1.jtempurl.com/api/v1/orders \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -d '{"addressId":"GUID-HERE","paymentMethod":"Paystack"}'
+
+8. Validate Coupon:
+   curl "http://shopfresherz-001-site1.jtempurl.com/api/v1/coupons/validate?code=WELCOME10&cartTotal=100000"
+
+9. Search Products:
+   curl "http://shopfresherz-001-site1.jtempurl.com/api/v1/search?q=iphone&page=1&pageSize=20"
+
+10. Get Flash Deals:
+    curl http://shopfresherz-001-site1.jtempurl.com/api/v1/flash-deals
+
+11. Upload Product Image (Admin):
+    curl -X POST http://shopfresherz-001-site1.jtempurl.com/api/v1/products/GUID-HERE/images \
+      -H "Authorization: Bearer ADMIN_TOKEN" \
+      -F "file=@/path/to/image.jpg"
+
+12. Get Admin Dashboard Stats:
+    curl http://shopfresherz-001-site1.jtempurl.com/api/v1/admin/dashboard \
+      -H "Authorization: Bearer ADMIN_TOKEN"
+
+================================================================================
+SECTION 5: PAYMENT INTEGRATION
+================================================================================
+
+Paystack Flow (Primary):
+  1. Client calls POST /api/v1/orders with paymentMethod="Paystack"
+  2. Server creates order with status "Pending" and calls Paystack Initialize API
+  3. Server returns payment URL in response
+  4. Client redirects user to Paystack payment page
+  5. After payment, Paystack sends webhook to:
+     POST /api/v1/payments/webhook/paystack
+  6. Server verifies payment signature, updates order status, sends confirmation
+  7. Client can poll GET /api/v1/orders/{orderNumber} for status
+
+Flutterwave Flow (Fallback):
+  1. Same order creation, paymentMethod="Flutterwave"
+  2. Server creates order and calls Flutterwave Initialize API
+  3. Client redirects user to Flutterwave payment page
+  4. After payment, Flutterwave sends webhook to:
+     POST /api/v1/payments/webhook/flutterwave
+  5. Server verifies payment hash, updates order status
+
+Webhook URLs to Register with Payment Providers:
+  Paystack:    POST /api/v1/payments/webhook/paystack
+  Flutterwave: POST /api/v1/payments/webhook/flutterwave
+
+Order Number Format:
+  SFZ-2026-XXXXX (where XXXXX is zero-padded sequential number)
+
+Payment Methods Supported:
+  - Card (via Paystack/Flutterwave)
+  - BankTransfer (via Paystack)
+  - USSD (via Paystack)
+  - PayOnDelivery (no external gateway)
+
+================================================================================
+SECTION 6: FRONTEND INTEGRATION GUIDE
+================================================================================
+
+CORS Allowed Origins:
+  - http://localhost:3000
+  - https://localhost:3000
+  - http://localhost:3001
+  - https://shopfresherz.vercel.app
+  - https://www.shopfresherz.vercel.app
+  - http://shopfresherz-001-site1.jtempurl.com
+  - https://shopfresherz.com
+  - https://www.shopfresherz.com
+
+JWT Token Storage:
+  - Recommended: httpOnly secure cookie (set by server on login/register)
+  - Alternative: localStorage/sessionStorage with Authorization: Bearer header
+  - Access token expires in 15 minutes; use refresh token to get new one
+  - Store refresh token securely (httpOnly cookie preferred)
+
+Guest Cart:
+  - Generate a UUID on first visit: crypto.randomUUID()
+  - Send with every cart request: X-Session-Id: {uuid}
+  - Cart persists in Redis (or memory fallback) keyed by session ID
+  - On login, guest cart merges with user cart
+
+Product Images:
+  - Each product can have multiple images
+  - 4 sizes per image: thumbUrl (150x150), displayUrl (600x600),
+    zoomUrl (1200x1200), originalUrl (full upload size)
+  - Use displayUrl for listing cards, zoomUrl for PDP zoom
+
+Product Attributes:
+  - Stored as JSON string in product.attributesJson field
+  - Parse on frontend: JSON.parse(product.attributesJson)
+  - Keys vary by category (display, ram, storage, battery, etc.)
+
+Delivery Fee Calculation:
+  - Based on product weight (weightKg field)
+  - Light items (< 1kg): base fee
+  - Heavy items: fee scales with weight
+
+VAT:
+  - 7.5% applied server-side on order total
+  - Included in order total returned by API
+
+Loyalty Points:
+  - 1 point per NGN 100 spent
+  - Visible in GET /api/v1/account/loyalty
+  - Admin can adjust via POST /api/v1/admin/users/{userId}/loyalty
+
+================================================================================
+SECTION 7: ENVIRONMENT VARIABLES
+================================================================================
+
+The following environment variables must be configured on the server:
+
+  Jwt:Issuer                -- JWT token issuer claim value
+  Jwt:Audience              -- JWT token audience claim value
+  Jwt:PrivateKeyPem         -- RSA 2048 private key in PEM format (RS256 signing)
+  Jwt:PublicKeyPem          -- RSA 2048 public key in PEM format (RS256 verification)
+  ConnectionStrings:DefaultConnection -- SQL Server connection string
+  SendGrid:ApiKey           -- SendGrid API key for transactional emails
+  SendGrid:FromEmail        -- Sender email address
+  SendGrid:FromName         -- Sender display name
+  Termii:ApiKey             -- Termii SMS API key
+  Termii:SenderId           -- Termii sender ID (alphanumeric)
+  Paystack:SecretKey        -- Paystack secret key (sk_live_...)
+  Paystack:PublicKey        -- Paystack public key (pk_live_...)
+  Paystack:WebhookSecret    -- Paystack webhook verification secret
+  Flutterwave:SecretKey     -- Flutterwave secret key
+  Flutterwave:PublicKey     -- Flutterwave public key
+  Flutterwave:CallbackUrl   -- Flutterwave payment callback URL
+  Flutterwave:WebhookSecret -- Flutterwave webhook verification secret
+  Azure:BlobStorage:ConnectionString -- Azure Blob Storage connection string
+  Azure:BlobStorage:ContainerName    -- Blob container name (e.g., shopfresherz-media)
+  Azure:BlobStorage:CdnBaseUrl       -- Azure CDN base URL for served images
+  Redis:ConnectionString    -- Redis connection string (optional, falls back to memory)
+  Elasticsearch:Uri         -- Elasticsearch server URI (optional, falls back to SQL)
+  Elasticsearch:ApiKey      -- Elasticsearch API key (optional)
+
+================================================================================
+SECTION 8: BACKGROUND JOBS
+================================================================================
+
+Managed by Hangfire dashboard at /hangfire (Admin/SuperAdmin only in production).
+
+1. StockReservationExpiryJob (every 5 minutes)
+   - Cancels orders stuck in "Pending" status for more than 30 minutes
+   - Releases reserved stock back to available inventory
+   - Queue: critical
+
+2. FlashDealExpiryJob (every 1 minute)
+   - Deactivates flash deals that have passed their EndsAt timestamp
+   - Sets IsActive = false on expired deals
+   - Queue: default
+
+3. BackInStockNotificationJob (every 10 minutes)
+   - Finds products that were out of stock but are now restocked
+   - Sends email notifications to users who registered interest
+   - Clears the notification requests after sending
+   - Queue: default
+
+================================================================================
+SECTION 9: ERROR CODES
+================================================================================
+
+Error Format: { "code": "SF-XXXX", "message": "Description" }
+
+SF-0001 -- Validation Error: Request body failed validation rules
+SF-0002 -- Not Found: Requested resource does not exist
+SF-0003 -- Unauthorized: Invalid or missing authentication token
+SF-0004 -- Forbidden: Insufficient permissions for this action
+SF-0005 -- Conflict: Resource already exists (duplicate email, phone, slug)
+SF-0006 -- Out of Stock: Product has insufficient inventory
+SF-0007 -- Cart Empty: Cannot place order with empty cart
+SF-0008 -- Invalid Coupon: Coupon code is invalid, expired, or maxed out
+SF-0009 -- Payment Failed: Payment gateway returned an error
+SF-0010 -- OTP Expired: One-time password has expired
+SF-0011 -- OTP Invalid: One-time password does not match
+SF-0012 -- Rate Limited: Too many requests (IP-based rate limit)
+SF-0013 -- Order Not Cancellable: Order is past cancellation window
+SF-0014 -- Address Not Found: Address does not belong to user
+SF-0015 -- Review Already Exists: User has already reviewed this product
+
+================================================================================
+SECTION 10: SEED DATA
+================================================================================
+
+SuperAdmin Account:
+  Email:    admin@shopfresherz.com
+  Password: Admin@ShopFresherz2026!
+
+15 Categories (slugs):
+  new-arrivals, mobile-phones, tablets, laptops-computers, smart-watches,
+  accessories, games-consoles, electronics, computing-accessories,
+  home-kitchen-tech, cables, musical-equipment, romoss, computer-mouse,
+  other-categories
+
+10 Brands:
+  Apple, Samsung, Tecno, Infinix, HP, Dell, Sony, JBL, Romoss, Logitech
+
+20 Products (SKUs):
+  IP16PM-256-BLK        -- Apple iPhone 16 Pro Max 256GB
+  SGS25U-512-TIT        -- Samsung Galaxy S25 Ultra 512GB
+  TECNO-CAM20-128       -- Tecno Camon 20 Pro 128GB
+  MBA-M3-16-512         -- Apple MacBook Air 15 M3 16GB 512GB
+  DELL-XPS15-I7-1TB     -- Dell XPS 15 Intel i7 32GB 1TB
+  PS5-SLIM-DISC         -- Sony PlayStation 5 Slim Disc Edition
+  AIRPODS-PRO2-USB      -- Apple AirPods Pro 2nd Gen USB-C
+  JBL-CHARGE5-BLK       -- JBL Charge 5 Portable Speaker Black
+  AW-S10-45-BLK         -- Apple Watch Series 10 45mm Black
+  LG-MX-MASTER3S        -- Logitech MX Master 3S Wireless Mouse
+  ANKER-USBC-240W-2M    -- Anker USB-C Cable 240W 2 Metres
+  SAMSUNG-65-QLED-4K    -- Samsung 65 Inch QLED 4K Smart TV
+  ROMOSS-30000-PD       -- Romoss Sense 8P+ 30000mAh Power Bank
+  XIAOMI-ROBOT-S10      -- Xiaomi Robot Vacuum S10 Pro
+  IPAD-PRO-M4-11-256    -- Apple iPad Pro M4 11 Inch 256GB WiFi
+  INFINIX-GT20-PRO      -- Infinix GT 20 Pro Gaming Phone
+  BLUE-YETI-USB-BLK     -- Blue Yeti USB Microphone Black
+  RAZER-DA-V3-HYP       -- Razer DeathAdder V3 HyperSpeed
+  HP-OMEN-16-RTX4070    -- HP Omen 16 Gaming Laptop RTX 4070
+  (Note: 20th product may vary based on seed execution)
+
+3 Coupons:
+  WELCOME10    -- 10% off, min order NGN 50,000, expires in 6 months
+  FRESHERZ5000 -- NGN 5,000 off, min order NGN 100,000, expires in 3 months
+  GADGET15     -- 15% off, min order NGN 200,000, expires in 2 months
+
+1 Active Flash Deal:
+  Product: HP Omen 16 Gaming Laptop RTX 4070
+  Sale Price: NGN 899,000 (was NGN 1,100,000)
+  Duration: 3 days from seeding
+
+3 Homepage Banners:
+  1. "Freshest Tech in Nigeria" -> /category/new-arrivals
+  2. "PS5 Slim Now Available"   -> /category/games-consoles
+  3. "Up to 30% Off Accessories" -> /category/accessories
+
+3 Sample Reviews (on iPhone 16 Pro Max):
+  - 5 stars: "Absolutely incredible phone"
+  - 5 stars: "Worth every kobo"
+  - 4 stars: "Great but pricey"
+
+================================================================================
+SECTION 11: DEPLOYMENT
+================================================================================
+
+Host          : SmarterASP.NET (Windows)
+Server        : win8072.site4now.net
+App Path      : shopfresherz-001-site1
+Database      : SQL8012.site4now.net / db_ac8161_shopfresherz
+Live URL      : http://shopfresherz-001-site1.jtempurl.com
+
+Redeploy Command (PowerShell):
+  dotnet publish ShopFresherz.API `
+    -c Release `
+    -r win-x86 `
+    --no-self-contained `
+    /p:WebPublishMethod=MSDeploy `
+    /p:MSDeployServiceURL="https://win8072.site4now.net:8172/MsDeploy.axd?site=shopfresherz-001-site1" `
+    /p:DeployIisAppPath="shopfresherz-001-site1" `
+    /p:UserName="shopfresherz-001" `
+    /p:Password="shopfresherz123" `
+    /p:AllowUntrustedCertificate=true `
+    /p:MSDeployPublishMethod=WMSVC `
+    /p:SkipExtraFilesOnServer=true `
+    /p:EnvironmentName=Production
+
+Running New Migrations:
+  1. Create migration:
+     dotnet ef migrations add MigrationName `
+       --project ShopFresherz.Infrastructure `
+       --startup-project ShopFresherz.API
+  2. Apply to production:
+     $env:ConnectionStrings__DefaultConnection = "Server=SQL8012.site4now.net;Database=db_ac8161_shopfresherz;User Id=db_ac8161_shopfresherz_admin;Password=shopfresherz123;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+     dotnet ef database update `
+       --project ShopFresherz.Infrastructure `
+       --startup-project ShopFresherz.API
+  3. Or generate idempotent SQL script:
+     dotnet ef migrations script `
+       --project ShopFresherz.Infrastructure `
+       --startup-project ShopFresherz.API `
+       --output migration.sql `
+       --idempotent
+
+================================================================================
+SECTION 12: KNOWN LIMITATIONS / NOTES
+================================================================================
+
+1. Elasticsearch not hosted -- Search falls back to SQL LIKE queries.
+   All search endpoints work but without full-text ranking/facets.
+
+2. Redis not hosted -- Cache falls back to in-memory IMemoryCache.
+   Cache is not shared across instances; survives app restarts on single instance.
+
+3. Azure Blob Storage not configured -- In development, images are stored
+   locally in wwwroot/uploads/. Configure Azure Blob for production media.
+
+4. Swagger enabled in production for API testing -- DISABLE before go-live.
+   Remove the UseSwagger/UseSwaggerUI block from Program.cs or guard with
+   environment check.
+
+5. Google OAuth scaffolded but not fully wired -- Google authentication
+   package is installed but the callback URL and client secrets are not
+   configured. Not functional yet.
+
+6. Flutterwave webhook uses shared handler -- The Flutterwave webhook endpoint
+   shares logic with the Paystack webhook. Ensure separate webhook secrets
+   are validated for each provider.
+
+7. No CDN configured -- Product images are served directly from the app
+   server or Azure Blob. Configure Azure CDN or CloudFlare for faster delivery.
+
+8. Email/SMS services gracefully disabled -- When SendGrid/Termii API keys
+   are empty, the services log a message and skip sending. Registration
+   and password reset work but users won't receive OTP emails/SMS.
+
+9. Password on seed admin user -- The seeded admin password is hardcoded
+   in DataSeeder.cs. Change it via the admin panel or update the password
+   hash directly in the database after first login.
+
+10. Rate limiting defaults -- IP rate limiting is configured with generous
+    defaults (60 req/min). Adjust in Program.cs for production traffic.
+
+================================================================================
+                        END OF API HANDOVER DOCUMENT
+                    Generated: 2026-05-10
+                    Version: 1.0.0
+================================================================================

@@ -1,0 +1,77 @@
+using ShopFresherz.Domain.Common;
+using ShopFresherz.Domain.Enums;
+
+namespace ShopFresherz.Domain.Entities;
+
+/// <summary>
+/// Represents a customer order. Supports both registered users and guest checkout.
+/// Follows a strict state machine (see PRD Section 9.2).
+/// </summary>
+public class Order : BaseEntity
+{
+    /// <summary>Gets or sets the human-readable order reference (e.g., SFZ-2026-00001).</summary>
+    public string OrderNumber { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the registered user ID (null for guest orders).</summary>
+    public Guid? UserId { get; set; }
+
+    /// <summary>Gets or sets the registered user navigation property.</summary>
+    public User? User { get; set; }
+
+    /// <summary>Gets or sets the guest email for guest checkout orders.</summary>
+    public string? GuestEmail { get; set; }
+
+    /// <summary>Gets or sets the current order state machine status.</summary>
+    public OrderStatus Status { get; set; } = OrderStatus.Pending;
+
+    /// <summary>Gets or sets the payment confirmation status.</summary>
+    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
+
+    /// <summary>Gets or sets the payment method used at checkout.</summary>
+    public PaymentMethod? PaymentMethod { get; set; }
+
+    /// <summary>Gets or sets the Paystack/Flutterwave transaction reference.</summary>
+    public string? PaymentReference { get; set; }
+
+    /// <summary>Gets or sets the order subtotal before discounts (server-calculated).</summary>
+    public decimal Subtotal { get; set; }
+
+    /// <summary>Gets or sets the total coupon/loyalty discount applied.</summary>
+    public decimal DiscountAmount { get; set; } = 0;
+
+    /// <summary>Gets or sets the delivery fee applied at checkout.</summary>
+    public decimal DeliveryFee { get; set; } = 0;
+
+    /// <summary>Gets or sets the Nigerian VAT amount (7.5% of subtotal minus discount).</summary>
+    public decimal VatAmount { get; set; } = 0;
+
+    /// <summary>Gets or sets the final charge amount (Subtotal − Discount + Delivery + VAT).</summary>
+    public decimal Total { get; set; }
+
+    /// <summary>Gets or sets the applied coupon ID.</summary>
+    public int? CouponId { get; set; }
+
+    /// <summary>Gets or sets the applied coupon navigation property.</summary>
+    public Coupon? Coupon { get; set; }
+
+    /// <summary>
+    /// Gets or sets the JSON snapshot of the delivery address at order time
+    /// (immutable; decoupled from user's current saved addresses).
+    /// </summary>
+    public string DeliveryAddressJson { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the selected delivery method.</summary>
+    public DeliveryMethod DeliveryMethod { get; set; }
+
+    /// <summary>Gets or sets the estimated delivery date.</summary>
+    public DateTime? EstimatedDelivery { get; set; }
+
+    /// <summary>Gets or sets the courier tracking number (set when status transitions to Shipped).</summary>
+    public string? TrackingNumber { get; set; }
+
+    /// <summary>Gets or sets the optional customer order note.</summary>
+    public string? Notes { get; set; }
+
+    /// <summary>Gets or sets the line items in this order.</summary>
+    public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
+}

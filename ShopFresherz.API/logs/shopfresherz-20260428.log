@@ -1,0 +1,95 @@
+2026-04-28 15:25:58.888 +01:00 [FTL] ShopFresherz API failed to start.
+Microsoft.Data.SqlClient.SqlException (0x80131904): A network-related or instance-specific error occurred while establishing a connection to SQL Server. The server was not found or was not accessible. Verify that the instance name is correct and that SQL Server is configured to allow remote connections. (provider: Named Pipes Provider, error: 40 - Could not open a connection to SQL Server)
+ ---> System.ComponentModel.Win32Exception (5): Access is denied.
+   at Microsoft.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at Microsoft.Data.SqlClient.TdsParser.Connect(ServerInfo serverInfo, SqlInternalConnectionTds connHandler, Boolean ignoreSniOpenTimeout, Int64 timerExpire, SqlConnectionString connectionOptions, Boolean withFailover)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds.AttemptOneLogin(ServerInfo serverInfo, String newPassword, SecureString newSecurePassword, Boolean ignoreSniOpenTimeout, TimeoutTimer timeout, Boolean withFailover)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds.LoginNoFailover(ServerInfo serverInfo, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance, SqlConnectionString connectionOptions, SqlCredential credential, TimeoutTimer timeout)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds.OpenLoginEnlist(TimeoutTimer timeout, SqlConnectionString connectionOptions, SqlCredential credential, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds..ctor(DbConnectionPoolIdentity identity, SqlConnectionString connectionOptions, SqlCredential credential, Object providerInfo, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance, SqlConnectionString userConnectionOptions, SessionData reconnectSessionData, Boolean applyTransientFaultHandling, String accessToken, DbConnectionPool pool)
+   at Microsoft.Data.SqlClient.SqlConnectionFactory.CreateConnection(DbConnectionOptions options, DbConnectionPoolKey poolKey, Object poolGroupProviderInfo, DbConnectionPool pool, DbConnection owningConnection, DbConnectionOptions userOptions)
+   at Microsoft.Data.ProviderBase.DbConnectionFactory.CreatePooledConnection(DbConnectionPool pool, DbConnection owningObject, DbConnectionOptions options, DbConnectionPoolKey poolKey, DbConnectionOptions userOptions)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.CreateObject(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.UserCreateRequest(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.TryGetConnection(DbConnection owningObject, UInt32 waitForMultipleObjectsTimeout, Boolean allowCreate, Boolean onlyOneCheckConnection, DbConnectionOptions userOptions, DbConnectionInternal& connection)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.WaitForPendingOpen()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.OpenInternalAsync(Boolean errorsExpected, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.OpenInternalAsync(Boolean errorsExpected, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.OpenAsync(CancellationToken cancellationToken, Boolean errorsExpected)
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerDatabaseCreator.<>c__DisplayClass20_0.<<ExistsAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerDatabaseCreator.<>c__DisplayClass20_0.<<ExistsAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerDatabaseCreator.<>c__DisplayClass20_0.<<ExistsAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Migrations.HistoryRepository.ExistsAsync(CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.MigrateAsync(String targetMigration, CancellationToken cancellationToken)
+   at Program.<Main>$(String[] args) in C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.API\Program.cs:line 151
+ClientConnectionId:00000000-0000-0000-0000-000000000000
+Error Number:5,State:0,Class:20
+2026-04-28 15:26:32.198 +01:00 [INF] Executed DbCommand (468ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-04-28 15:26:32.777 +01:00 [INF] Executed DbCommand (424ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-04-28 15:26:33.158 +01:00 [INF] Executed DbCommand (373ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-04-28 15:26:33.464 +01:00 [INF] Executed DbCommand (305ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-04-28 15:26:33.835 +01:00 [INF] Executed DbCommand (332ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-04-28 15:26:34.315 +01:00 [INF] User profile is available. Using 'C:\Users\Dell\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-04-28 15:26:34.967 +01:00 [INF] Now listening on: http://localhost:5207
+2026-04-28 15:26:34.974 +01:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-04-28 15:26:34.976 +01:00 [INF] Hosting environment: Development
+2026-04-28 15:26:34.976 +01:00 [INF] Content root path: C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.API
+2026-04-28 15:28:10.427 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - null null
+2026-04-28 15:28:12.446 +01:00 [INF] HTTP GET /swagger/v1/swagger.json responded 200 in 1658.1029 ms
+2026-04-28 15:28:12.462 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 2076.9316ms
+2026-04-28 15:28:24.506 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - null null
+2026-04-28 15:28:24.606 +01:00 [INF] HTTP GET /swagger/v1/swagger.json responded 200 in 99.0026 ms
+2026-04-28 15:28:24.607 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 101.015ms
+2026-04-28 15:29:12.231 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - null null
+2026-04-28 15:29:12.616 +01:00 [INF] HTTP GET /swagger/v1/swagger.json responded 200 in 339.5759 ms
+2026-04-28 15:29:12.622 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 397.2802ms
+2026-04-28 15:29:13.014 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/favicon.ico - null null
+2026-04-28 15:29:13.171 +01:00 [WRN] Failed to determine the https port for redirect.
+2026-04-28 15:29:13.768 +01:00 [INF] HTTP GET /favicon.ico responded 404 in 754.0706 ms
+2026-04-28 15:29:13.771 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/favicon.ico - 404 0 null 761.2612ms
+2026-04-28 15:29:13.826 +01:00 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5207/favicon.ico, Response status code: 404
+2026-04-28 15:29:24.329 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/ - null null
+2026-04-28 15:29:24.350 +01:00 [INF] HTTP GET /swagger/ responded 301 in 16.0416 ms
+2026-04-28 15:29:24.355 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/ - 301 0 null 25.9434ms
+2026-04-28 15:29:24.621 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/index.html - null null
+2026-04-28 15:29:24.944 +01:00 [INF] HTTP GET /swagger/index.html responded 200 in 321.3298 ms
+2026-04-28 15:29:24.946 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/index.html - 200 null text/html;charset=utf-8 325.1813ms
+2026-04-28 15:29:25.049 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/swagger-ui.css - null null
+2026-04-28 15:29:25.054 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/swagger-ui-bundle.js - null null
+2026-04-28 15:29:25.054 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/index.css - null null
+2026-04-28 15:29:25.280 +01:00 [INF] Sending file. Request path: '/swagger-ui.css'. Physical path: 'N/A'
+2026-04-28 15:29:25.282 +01:00 [INF] Sending file. Request path: '/index.css'. Physical path: 'N/A'
+2026-04-28 15:29:25.282 +01:00 [INF] HTTP GET /swagger/index.css responded 200 in 225.5206 ms
+2026-04-28 15:29:25.301 +01:00 [INF] HTTP GET /swagger/swagger-ui.css responded 200 in 251.0230 ms
+2026-04-28 15:29:25.301 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/index.css - 200 202 text/css 247.5696ms
+2026-04-28 15:29:25.302 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/swagger-ui.css - 200 152034 text/css 252.1886ms
+2026-04-28 15:29:25.546 +01:00 [INF] Sending file. Request path: '/swagger-ui-bundle.js'. Physical path: 'N/A'
+2026-04-28 15:29:25.547 +01:00 [INF] HTTP GET /swagger/swagger-ui-bundle.js responded 200 in 490.6305 ms
+2026-04-28 15:29:25.547 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/swagger-ui-bundle.js - 200 1452753 text/javascript 493.2233ms
+2026-04-28 15:29:25.863 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/swagger-ui-standalone-preset.js - null null
+2026-04-28 15:29:25.863 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/index.js - null null
+2026-04-28 15:29:25.871 +01:00 [INF] HTTP GET /swagger/index.js responded 200 in 3.1802 ms
+2026-04-28 15:29:25.884 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/index.js - 200 null application/javascript;charset=utf-8 19.6424ms
+2026-04-28 15:29:25.955 +01:00 [INF] Sending file. Request path: '/swagger-ui-standalone-preset.js'. Physical path: 'N/A'
+2026-04-28 15:29:25.955 +01:00 [INF] HTTP GET /swagger/swagger-ui-standalone-preset.js responded 200 in 91.6522 ms
+2026-04-28 15:29:25.955 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/swagger-ui-standalone-preset.js - 200 230293 text/javascript 92.2485ms
+2026-04-28 15:29:26.579 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/favicon-16x16.png - null null
+2026-04-28 15:29:26.580 +01:00 [INF] Sending file. Request path: '/favicon-16x16.png'. Physical path: 'N/A'
+2026-04-28 15:29:26.580 +01:00 [INF] HTTP GET /swagger/favicon-16x16.png responded 200 in 0.7193 ms
+2026-04-28 15:29:26.581 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/favicon-16x16.png - 200 665 image/png 1.3815ms
+2026-04-28 15:29:27.311 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - null null
+2026-04-28 15:29:28.532 +01:00 [INF] HTTP GET /swagger/v1/swagger.json responded 200 in 1220.7122 ms
+2026-04-28 15:29:28.555 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5207/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 1244.4321ms

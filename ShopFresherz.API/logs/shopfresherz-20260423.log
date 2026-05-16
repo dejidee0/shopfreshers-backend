@@ -1,0 +1,17 @@
+2026-04-23 18:32:03.907 +01:00 [INF] Executed DbCommand (1,671ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-04-23 18:32:04.472 +01:00 [INF] Executed DbCommand (383ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-04-23 18:32:04.766 +01:00 [INF] Executed DbCommand (287ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-04-23 18:32:05.069 +01:00 [INF] Executed DbCommand (302ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-04-23 18:32:05.419 +01:00 [INF] Executed DbCommand (304ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-04-23 18:32:05.818 +01:00 [INF] User profile is available. Using 'C:\Users\Dell\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-04-23 18:32:06.222 +01:00 [INF] Now listening on: http://localhost:5207
+2026-04-23 18:32:06.231 +01:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-04-23 18:32:06.232 +01:00 [INF] Hosting environment: Development
+2026-04-23 18:32:06.232 +01:00 [INF] Content root path: C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.API
