@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "1dCsXOt2JL4=",
+  "dgSpecHash": "4CpijTY0RU8=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.API\\ShopFresherz.API.csproj",
+  "projectFilePath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.API\\ShopFresherz.API.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Dell\\.nuget\\packages\\aspnetcoreratelimit\\5.0.0\\aspnetcoreratelimit.5.0.0.nupkg.sha512",
     "C:\\Users\\Dell\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",

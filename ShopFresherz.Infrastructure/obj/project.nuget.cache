@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "he9hBEcKO4s=",
+  "dgSpecHash": "TPF8R2Ygm6w=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
+  "projectFilePath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Dell\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\Dell\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",
@@ -123,9 +123,9 @@
       "code": "NU1902",
       "level": "Warning",
       "message": "Package 'SixLabors.ImageSharp' 3.1.7 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-rxmq-m78w-7wmc",
-      "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
+      "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
+      "filePath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
       "libraryId": "SixLabors.ImageSharp",
       "targetGraphs": [
         "net8.0"

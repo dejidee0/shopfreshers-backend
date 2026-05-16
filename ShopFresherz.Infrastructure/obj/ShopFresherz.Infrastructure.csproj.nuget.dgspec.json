@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj": {}
+    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Application\\ShopFresherz.Application.csproj": {
+    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Application\\ShopFresherz.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Application\\ShopFresherz.Application.csproj",
+        "projectUniqueName": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Application\\ShopFresherz.Application.csproj",
         "projectName": "ShopFresherz.Application",
-        "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Application\\ShopFresherz.Application.csproj",
+        "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Application\\ShopFresherz.Application.csproj",
         "packagesPath": "C:\\Users\\Dell\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Application\\obj\\",
+        "outputPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Application\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -33,8 +33,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj": {
-                "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj"
+              "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj": {
+                "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj"
               }
             }
           }
@@ -96,14 +96,14 @@
         }
       }
     },
-    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj": {
+    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj",
         "projectName": "ShopFresherz.Domain",
-        "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj",
+        "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj",
         "packagesPath": "C:\\Users\\Dell\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\obj\\",
+        "outputPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -162,14 +162,14 @@
         }
       }
     },
-    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj": {
+    "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
         "projectName": "ShopFresherz.Infrastructure",
-        "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
+        "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\ShopFresherz.Infrastructure.csproj",
         "packagesPath": "C:\\Users\\Dell\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Infrastructure\\obj\\",
+        "outputPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -191,11 +191,11 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Application\\ShopFresherz.Application.csproj": {
-                "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Application\\ShopFresherz.Application.csproj"
+              "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Application\\ShopFresherz.Application.csproj": {
+                "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Application\\ShopFresherz.Application.csproj"
               },
-              "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj": {
-                "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj"
+              "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj": {
+                "projectPath": "C:\\Users\\Dell\\Desktop\\Shopfreshers\\shopfreshers-backend\\ShopFresherz.Domain\\ShopFresherz.Domain.csproj"
               }
             }
           }
