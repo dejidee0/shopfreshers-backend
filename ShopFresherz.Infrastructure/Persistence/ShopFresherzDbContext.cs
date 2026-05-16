@@ -72,8 +72,11 @@ public class ShopFresherzDbContext : DbContext
     /// <summary>Gets or sets the NotifyRequests table.</summary>
     public DbSet<NotifyRequest> NotifyRequests => Set<NotifyRequest>();
 
-    /// <summary>Gets or sets the AuditLogs table.</summary>
+    /// Gets or sets the AuditLogs table.</summary>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    /// <summary>Gets or sets the Notifications table.</summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     /// <summary>Gets or sets the HomepageBanners table.</summary>
     public DbSet<HomepageBanner> HomepageBanners => Set<HomepageBanner>();

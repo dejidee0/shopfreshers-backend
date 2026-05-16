@@ -35,8 +35,15 @@ public interface IProductRepository
     /// <summary>Returns products added in the last 30 days.</summary>
     Task<IReadOnlyList<Product>> GetNewArrivalsAsync(int limit, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns best deals by discount percentage (CompareAtPrice → Price).
+    /// Only includes products where CompareAtPrice > Price.
+    /// </summary>
+    Task<IReadOnlyList<Product>> GetBestDealsAsync(int limit, CancellationToken cancellationToken = default);
+
     /// <summary>Returns the top N products by sold count.</summary>
     Task<IReadOnlyList<Product>> GetBestSellersAsync(int limit, CancellationToken cancellationToken = default);
+
 
     /// <summary>Returns related products by category and tags.</summary>
     Task<IReadOnlyList<Product>> GetRelatedAsync(Guid productId, int limit, CancellationToken cancellationToken = default);

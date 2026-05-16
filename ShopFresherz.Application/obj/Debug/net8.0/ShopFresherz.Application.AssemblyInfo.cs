@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ShopFresherz.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+69be2b38b6a74e56dbf7f18e2c286258efacbcf1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e2c5893d521e475c851e729839b2ec9d21d3980a")]
 [assembly: System.Reflection.AssemblyProductAttribute("ShopFresherz.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ShopFresherz.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

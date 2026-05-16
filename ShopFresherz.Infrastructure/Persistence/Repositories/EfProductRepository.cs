@@ -131,6 +131,19 @@ internal sealed class EfProductRepository : IProductRepository
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Product>> GetBestDealsAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        // "Best deals" = highest discount percentage based on CompareAtPrice -> Price.
+        // Include only products where CompareAtPrice is meaningful.
+        return await _context.Products
+            .Include(p => p.Images)
+            .Where(p => p.IsActive && p.CompareAtPrice != null && p.CompareAtPrice > p.Price)
+            .OrderByDescending(p => (p.CompareAtPrice!.Value - p.Price) / p.CompareAtPrice!.Value)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Product>> GetBestSellersAsync(int limit, CancellationToken cancellationToken = default)
     {
         return await _context.Products
@@ -140,6 +153,7 @@ internal sealed class EfProductRepository : IProductRepository
             .Take(limit)
             .ToListAsync(cancellationToken);
     }
+
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<Product>> GetRelatedAsync(Guid productId, int limit, CancellationToken cancellationToken = default)

@@ -9,3 +9,15 @@ C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Domain\obj\Debug\net8.0\ShopFres
 C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Domain\obj\Debug\net8.0\refint\ShopFresherz.Domain.dll
 C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.pdb
 C:\Users\Dell\Desktop\Shopfreshers\ShopFresherz.Domain\obj\Debug\net8.0\ref\ShopFresherz.Domain.dll
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\bin\Debug\net8.0\ShopFresherz.Domain.deps.json
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\bin\Debug\net8.0\ShopFresherz.Domain.dll
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\bin\Debug\net8.0\ShopFresherz.Domain.pdb
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.AssemblyInfoInputs.cache
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.AssemblyInfo.cs
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.sourcelink.json
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.dll
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\refint\ShopFresherz.Domain.dll
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ShopFresherz.Domain.pdb
+C:\Users\Dell\Desktop\Shopfreshers\shopfreshers-backend\ShopFresherz.Domain\obj\Debug\net8.0\ref\ShopFresherz.Domain.dll

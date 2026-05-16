@@ -3,9 +3,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using ShopFresherz.Domain.Interfaces;
+using ShopFresherz.Domain.Interfaces.Repositories;
 using ShopFresherz.Domain.Interfaces.Services;
 using ShopFresherz.Infrastructure.Configuration;
 using ShopFresherz.Infrastructure.Persistence;
+using ShopFresherz.Infrastructure.Persistence.Repositories;
 using ShopFresherz.Infrastructure.Search;
 using ShopFresherz.Infrastructure.Services;
 
@@ -95,6 +97,9 @@ public static class ServiceCollectionExtensions
         // ── Search ─────────────────────────────────────────────────────────────
         services.Configure<ElasticsearchOptions>(configuration.GetSection("Elasticsearch"));
         services.AddScoped<ISearchService, ElasticsearchService>();
+
+        // ── Notifications ───────────────────────────────────────────────────────
+        services.AddScoped<INotificationRepository, EfNotificationRepository>();
 
         // ── Payment gateway ────────────────────────────────────────────────────
         services.AddTransient<IPaymentService, PaystackPaymentService>();

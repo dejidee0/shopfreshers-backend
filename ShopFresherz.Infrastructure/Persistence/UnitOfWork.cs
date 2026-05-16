@@ -24,6 +24,7 @@ public sealed class UnitOfWork : IUnitOfWork
     private IAddressRepository?    _addresses;
     private IWishlistRepository?   _wishlists;
     private ILoyaltyTransactionRepository? _loyaltyTransactions;
+    private INotificationRepository? _notifications;
     private INotifyRequestRepository? _notifyRequests;
     private IHomepageBannerRepository? _homepageBanners;
 
@@ -80,6 +81,10 @@ public sealed class UnitOfWork : IUnitOfWork
     /// <inheritdoc />
     public ILoyaltyTransactionRepository LoyaltyTransactions =>
         _loyaltyTransactions ??= new EfLoyaltyTransactionRepository(_context);
+
+    /// <inheritdoc />
+    public INotificationRepository Notifications =>
+        _notifications ??= new EfNotificationRepository(_context);
 
     /// <inheritdoc />
     public INotifyRequestRepository NotifyRequests =>
