@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Application.Dtos.Auth;
 using ShopFresherz.Application.Features.Auth.Commands.ForgotPassword;
+using ShopFresherz.Application.Features.Auth.Commands.GoogleSignIn;
 using ShopFresherz.Application.Features.Auth.Commands.Login;
 using ShopFresherz.Application.Features.Auth.Commands.Logout;
 using ShopFresherz.Application.Features.Auth.Commands.RefreshToken;
@@ -54,6 +55,22 @@ public sealed class AuthController : ControllerBase
     {
         Result<AuthResponse> result =
             await _mediator.Send(new LoginCommand(request), cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
+    }
+
+    /// <summary>Authenticates or creates a customer using a Google ID token.</summary>
+    [AllowAnonymous]
+    [HttpPost("google")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GoogleSignIn(
+        [FromBody] GoogleSignInRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result<AuthResponse> result = await _mediator.Send(
+            new GoogleSignInCommand(request.IdToken), cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
     }
@@ -126,7 +143,9 @@ public sealed class AuthController : ControllerBase
 
     private Guid GetUserId()
     {
-        string? sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+        string? sub =
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) ??
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return Guid.TryParse(sub, out Guid id) ? id : Guid.Empty;
     }
 

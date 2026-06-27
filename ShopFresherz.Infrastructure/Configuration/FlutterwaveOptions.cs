@@ -7,6 +7,8 @@ public sealed class FlutterwaveOptions
 
     public string PublicKey { get; init; } = string.Empty;
 
+    public string EncryptionKey { get; init; } = string.Empty;
+
     public string CallbackUrl { get; init; } = "https://shopfresherz.com/order/confirmed";
 
     public string WebhookSecret { get; init; } = string.Empty;

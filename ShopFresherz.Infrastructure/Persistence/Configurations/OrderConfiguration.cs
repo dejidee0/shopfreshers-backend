@@ -36,6 +36,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(x => x.PaymentReference).HasMaxLength(100);
 
+        builder.Property(x => x.TxRef).HasMaxLength(100);
+        builder.HasIndex(x => x.TxRef).IsUnique().HasFilter("[TxRef] IS NOT NULL");
+
         builder.Property(x => x.Subtotal)
             .IsRequired()
             .HasColumnType("decimal(18,2)");

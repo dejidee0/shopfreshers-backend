@@ -23,7 +23,9 @@ public sealed class ReviewsController : ControllerBase
     }
 
     /// <summary>Returns paginated approved reviews for a product.</summary>
+    [AllowAnonymous]
     [HttpGet("product/{productId:guid}")]
+    [HttpGet("/api/v1/products/{productId:guid}/reviews")]
     [ProducesResponseType(typeof(PagedResult<ReviewDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetProductReviews(
         [FromRoute] Guid productId,
@@ -60,7 +62,9 @@ public sealed class ReviewsController : ControllerBase
 
     private Guid GetUserId()
     {
-        string? sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+        string? sub =
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) ??
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return Guid.TryParse(sub, out Guid id) ? id : Guid.Empty;
     }
 

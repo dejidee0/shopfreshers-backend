@@ -64,4 +64,20 @@ internal sealed class EfCategoryRepository : ICategoryRepository
     {
         _context.Categories.Update(category);
     }
+
+    /// <inheritdoc />
+    public async Task<bool> SlugExistsAsync(string slug, int? excludeId, CancellationToken cancellationToken = default)
+    {
+        string normalised = slug.ToLowerInvariant();
+        return await _context.Categories
+            .AsNoTracking()
+            .AnyAsync(c => c.Slug == normalised && (!excludeId.HasValue || c.Id != excludeId.Value),
+                cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public void Delete(Category category)
+    {
+        _context.Categories.Remove(category);
+    }
 }

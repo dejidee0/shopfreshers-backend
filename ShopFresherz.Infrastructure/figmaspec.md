@@ -5,7 +5,7 @@ Prepared for: AI Backend Build Agent
 Project: ShopFresherz Gadget Store  
 Backend Target: ASP.NET Core 8 Clean Architecture API or equivalent production-grade backend  
 Frontend Source: Figma export screens and existing backend handover  
-Important: Do not hardcode secrets, admin passwords, payment keys, or production database credentials. Use environment variables only.
+Important: Do not hardcode secrets, admin passwords, payment keys, or production database credentials Use environment variables only.
 
 ---
 

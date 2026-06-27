@@ -12,8 +12,11 @@ public interface IOrderRepository
     /// <summary>Retrieves an order by the human-readable order number (e.g., SFZ-2026-00001).</summary>
     Task<Order?> GetByOrderNumberAsync(string orderNumber, CancellationToken cancellationToken = default);
 
-    /// <summary>Retrieves an order by Paystack/Flutterwave payment reference.</summary>
+    /// <summary>Retrieves an order by Flutterwave payment reference.</summary>
     Task<Order?> GetByPaymentReferenceAsync(string reference, CancellationToken cancellationToken = default);
+
+    /// <summary>Retrieves an order by its inline-popup Flutterwave transaction reference (TxRef).</summary>
+    Task<Order?> GetByTxRefAsync(string txRef, CancellationToken cancellationToken = default);
 
     /// <summary>Returns a paginated order history for a registered user.</summary>
     Task<(IReadOnlyList<Order> Items, int TotalCount)> GetUserOrdersAsync(

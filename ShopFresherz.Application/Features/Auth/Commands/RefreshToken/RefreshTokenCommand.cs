@@ -66,7 +66,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
         {
             AccessToken  = newAccessToken,
             RefreshToken = newRefreshToken,
-            ExpiresAt    = DateTime.UtcNow.AddMinutes(15),
+            ExpiresAt    = DateTime.UtcNow.AddHours(24),
             User = new Dtos.Auth.UserDto
             {
                 Id            = user.Id,

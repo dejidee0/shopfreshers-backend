@@ -1,51 +1,42 @@
-using MediatR;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Domain.Entities;
 using ShopFresherz.Domain.Enums;
 using ShopFresherz.Domain.Interfaces;
 using ShopFresherz.Domain.Interfaces.Services;
 
-namespace ShopFresherz.Application.Features.Payments.Commands;
+namespace ShopFresherz.Application.Features.Payments.Services;
 
-/// <summary>
-/// Command for processing an inbound Paystack webhook event.
-/// Stock is deducted and order status updated only after cryptographic signature verification in the controller.
-/// </summary>
-public sealed record HandlePaystackWebhookCommand(
-    string Event,
-    string Reference,
-    decimal AmountKobo,
-    string CustomerEmail) : IRequest<Result<bool>>;
+/// <summary>Applies the once-only side effects of a confirmed order payment.</summary>
+public interface IOrderPaymentConfirmationService
+{
+    Task<Result<bool>> CompleteAsync(
+        Order order,
+        string? customerEmail,
+        OrderStatus completedStatus,
+        CancellationToken cancellationToken);
+}
 
-/// <summary>Handler for <see cref="HandlePaystackWebhookCommand"/>.</summary>
-public sealed class HandlePaystackWebhookCommandHandler
-    : IRequestHandler<HandlePaystackWebhookCommand, Result<bool>>
+/// <summary>Applies the once-only side effects of a confirmed order payment.</summary>
+public sealed class OrderPaymentConfirmationService : IOrderPaymentConfirmationService
 {
     private readonly IUnitOfWork _uow;
     private readonly IEmailService _email;
     private readonly ISmsService _sms;
 
-    public HandlePaystackWebhookCommandHandler(IUnitOfWork uow, IEmailService email, ISmsService sms)
+    public OrderPaymentConfirmationService(IUnitOfWork uow, IEmailService email, ISmsService sms)
     {
         _uow = uow;
         _email = email;
         _sms = sms;
     }
 
-    /// <inheritdoc />
-    public async Task<Result<bool>> Handle(
-        HandlePaystackWebhookCommand command,
+    public async Task<Result<bool>> CompleteAsync(
+        Order order,
+        string? customerEmail,
+        OrderStatus completedStatus,
         CancellationToken cancellationToken)
     {
-        if (!string.Equals(command.Event, "charge.success", StringComparison.OrdinalIgnoreCase))
-        {
-            return Result<bool>.Success(true);
-        }
-
-        Order? order = await _uow.Orders.GetByPaymentReferenceAsync(
-            command.Reference, cancellationToken);
-
-        if (order is null || order.PaymentStatus == PaymentStatus.Paid)
+        if (order.PaymentStatus == PaymentStatus.Paid)
         {
             return Result<bool>.Success(true);
         }
@@ -57,8 +48,7 @@ public sealed class HandlePaystackWebhookCommandHandler
 
             if (item.VariantId.HasValue)
             {
-                ProductVariant? variant = product.Variants
-                    .FirstOrDefault(v => v.Id == item.VariantId);
+                ProductVariant? variant = product.Variants.FirstOrDefault(v => v.Id == item.VariantId);
                 if (variant is not null)
                 {
                     variant.StockQty = Math.Max(0, variant.StockQty - item.Quantity);
@@ -99,28 +89,26 @@ public sealed class HandlePaystackWebhookCommandHandler
             }
         }
 
-        order.Status = OrderStatus.Processing;
+        order.Status = completedStatus;
         order.PaymentStatus = PaymentStatus.Paid;
         _uow.Orders.Update(order);
-
         await _uow.SaveChangesAsync(cancellationToken);
 
-        string recipientEmail = orderUser?.Email ?? command.CustomerEmail;
-
-        _ = _email.SendOrderConfirmationAsync(
+        string recipientEmail = orderUser?.Email ?? customerEmail ?? order.GuestEmail ?? string.Empty;
+        await _email.SendOrderConfirmationAsync(
             recipientEmail,
             orderUser?.FirstName ?? "Customer",
             order.OrderNumber,
             order.Total,
-            CancellationToken.None);
+            cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(orderUser?.Phone))
         {
-            _ = _sms.SendOrderUpdateAsync(
+            await _sms.SendOrderUpdateAsync(
                 orderUser.Phone,
                 order.OrderNumber,
                 "confirmed & being processed",
-                CancellationToken.None);
+                cancellationToken);
         }
 
         return Result<bool>.Success(true);

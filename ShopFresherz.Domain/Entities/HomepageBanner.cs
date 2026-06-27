@@ -15,6 +15,8 @@ public sealed class HomepageBanner : BaseEntity
 
     public string? CtaText { get; set; }
 
+    public string? Tag { get; set; }
+
     public int SortOrder { get; set; }
 
     public bool IsActive { get; set; } = true;

@@ -29,6 +29,11 @@ public sealed class CreateAddressCommandHandler : IRequestHandler<CreateAddressC
         CreateAddressCommand command,
         CancellationToken cancellationToken)
     {
+        if (command.UserId == Guid.Empty)
+        {
+            return Error.Unauthorized("Unable to resolve the current user identity.");
+        }
+
         CreateAddressRequest req = command.Request;
 
         if (req.IsDefault)

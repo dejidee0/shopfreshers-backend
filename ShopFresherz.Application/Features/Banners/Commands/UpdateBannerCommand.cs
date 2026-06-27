@@ -34,6 +34,7 @@ public sealed class UpdateBannerCommandHandler : IRequestHandler<UpdateBannerCom
         if (request.LinkUrl is not null) banner.LinkUrl = string.IsNullOrWhiteSpace(request.LinkUrl) ? null : request.LinkUrl.Trim();
         if (request.SubTitle is not null) banner.SubTitle = string.IsNullOrWhiteSpace(request.SubTitle) ? null : request.SubTitle.Trim();
         if (request.CtaText is not null) banner.CtaText = string.IsNullOrWhiteSpace(request.CtaText) ? null : request.CtaText.Trim();
+        if (request.Tag is not null) banner.Tag = string.IsNullOrWhiteSpace(request.Tag) ? null : request.Tag.Trim();
         if (request.SortOrder.HasValue) banner.SortOrder = request.SortOrder.Value;
         if (request.IsActive.HasValue) banner.IsActive = request.IsActive.Value;
         if (request.StartsAt.HasValue) banner.StartsAt = request.StartsAt;

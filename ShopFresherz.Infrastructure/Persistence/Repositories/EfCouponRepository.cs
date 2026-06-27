@@ -50,6 +50,15 @@ internal sealed class EfCouponRepository : ICouponRepository
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Coupon>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Coupons
+            .AsNoTracking()
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task AddAsync(Coupon coupon, CancellationToken cancellationToken = default)
     {
         await _context.Coupons.AddAsync(coupon, cancellationToken);

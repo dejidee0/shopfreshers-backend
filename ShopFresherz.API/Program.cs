@@ -37,8 +37,6 @@ try
 
     // ── Infrastructure (EF Core, repositories, services) ─────────────────────
     builder.Services.AddInfrastructure(builder.Configuration);
-    builder.Services.Configure<PaystackOptions>(
-        builder.Configuration.GetSection("Paystack"));
     if (builder.Environment.IsDevelopment())
     {
         builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
@@ -93,11 +91,26 @@ try
     builder.Services.AddInMemoryRateLimiting();
 
     // ── JWT RS256 authentication ───────────────────────────────────────────────
-    string publicKeyPem = builder.Configuration["Jwt:PublicKeyPem"]
-        ?? throw new InvalidOperationException("Jwt:PublicKeyPem is not configured.");
+    string? privateKeyPem = builder.Configuration["Jwt:PrivateKeyPem"];
+    string? publicKeyPem = builder.Configuration["Jwt:PublicKeyPem"];
+
+    if (string.IsNullOrWhiteSpace(privateKeyPem) && string.IsNullOrWhiteSpace(publicKeyPem))
+    {
+        throw new InvalidOperationException("Jwt:PrivateKeyPem or Jwt:PublicKeyPem is not configured.");
+    }
 
     RSA publicRsa = RSA.Create();
-    publicRsa.ImportFromPem(publicKeyPem);
+    if (!string.IsNullOrWhiteSpace(privateKeyPem))
+    {
+        privateKeyPem = privateKeyPem.Replace("\\n", "\n").Trim();
+        publicRsa.ImportFromPem(privateKeyPem);
+    }
+    else
+    {
+        publicKeyPem = publicKeyPem!.Replace("\\n", "\n").Trim();
+        publicRsa.ImportFromPem(publicKeyPem);
+    }
+
     RsaSecurityKey rsaPublicKey = new(publicRsa);
 
     builder.Services
@@ -153,23 +166,30 @@ try
                 .GetSection("Cors:AllowedOrigins")
                 .Get<string[]>() ?? Array.Empty<string>();
 
-            if (builder.Environment.IsDevelopment())
-            {
-                policy.WithOrigins(
-                        "http://localhost:3000",
-                        "http://localhost:3001",
-                        "https://localhost:3000")
-                      .AllowAnyHeader()
-                      .AllowAnyMethod()
-                      .AllowCredentials();
-            }
-            else
-            {
-                policy.WithOrigins(origins)
-                      .AllowAnyHeader()
-                      .AllowAnyMethod()
-                      .AllowCredentials();
-            }
+            string[] hardcoded =
+            [
+                "http://localhost:3000",
+                "https://localhost:3000",
+                "http://localhost:3001",
+                "https://localhost:3001",
+                "http://localhost:8080",
+                "https://localhost:8080",
+                "http://fresherz-001-site1.ftempurl.com",
+                "https://fresherz-001-site1.ftempurl.com",
+                "http://shopfresherz.com",
+                "https://shopfresherz.com",
+                "http://www.shopfresherz.com",
+                "https://www.shopfresherz.com"
+            ];
+
+            string[] allOrigins = origins
+                .Union(hardcoded, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            policy.WithOrigins(allOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
     });
 
@@ -223,6 +243,13 @@ try
     // ── Build and configure middleware pipeline ────────────────────────────────
     WebApplication app = builder.Build();
 
+    // Apply pending EF Core migrations automatically on startup (must run before seeding).
+    using (IServiceScope scope = app.Services.CreateScope())
+    {
+        ShopFresherzDbContext db = scope.ServiceProvider.GetRequiredService<ShopFresherzDbContext>();
+        await db.Database.MigrateAsync();
+    }
+
     // Seed baseline data (categories + admin + products etc.) for new/empty databases.
     // Each seed method is wrapped in try/catch so one failure won't crash the app.
     using (IServiceScope scope = app.Services.CreateScope())
@@ -232,12 +259,28 @@ try
         await DataSeeder.SeedAsync(db);
     }
 
-    // Apply pending EF Core migrations automatically on startup
-    using (IServiceScope scope = app.Services.CreateScope())
+    app.UseExceptionHandler(errorApp =>
     {
-        ShopFresherzDbContext db = scope.ServiceProvider.GetRequiredService<ShopFresherzDbContext>();
-        await db.Database.MigrateAsync();
-    }
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+
+            string origin = context.Request.Headers["Origin"].ToString();
+            if (!string.IsNullOrWhiteSpace(origin))
+            {
+                context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+                context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+            }
+
+            await context.Response.WriteAsync(
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    code = "INTERNAL_ERROR",
+                    message = "An unexpected error occurred."
+                }));
+        });
+    });
 
     app.UseSerilogRequestLogging();
 
@@ -262,6 +305,14 @@ try
     {
         if (context.Request.Method == "OPTIONS")
         {
+            context.Response.Headers["Access-Control-Allow-Origin"] =
+                context.Request.Headers["Origin"].ToString();
+            context.Response.Headers["Access-Control-Allow-Methods"] =
+                "GET, POST, PUT, DELETE, PATCH, OPTIONS";
+            context.Response.Headers["Access-Control-Allow-Headers"] =
+                "Content-Type, Authorization, X-Requested-With, Accept, Origin";
+            context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+            context.Response.Headers["Access-Control-Max-Age"] = "86400";
             context.Response.StatusCode = 204;
             await context.Response.CompleteAsync();
             return;
@@ -285,10 +336,10 @@ try
         {
             context.Response.Headers["Content-Security-Policy"] =
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' https://js.paystack.co; " +
+                "script-src 'self' 'unsafe-inline' https://checkout.flutterwave.com; " +
                 "style-src 'self' 'unsafe-inline'; " +
                 "img-src 'self' data: https:; " +
-                "connect-src 'self' https://api.paystack.co https://api.flutterwave.com;";
+                "connect-src 'self' https://api.flutterwave.com;";
         }
 
         await next();

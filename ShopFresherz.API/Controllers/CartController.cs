@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Application.Dtos.Cart;
@@ -23,6 +24,7 @@ public sealed class CartController : ControllerBase
     }
 
     /// <summary>Returns the active cart for the current user or guest session.</summary>
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(CartDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCart(
@@ -36,6 +38,7 @@ public sealed class CartController : ControllerBase
     }
 
     /// <summary>Adds a product to the cart. Supports guests (via X-Session-Id header) and authenticated users.</summary>
+    [AllowAnonymous]
     [HttpPost("items")]
     [ProducesResponseType(typeof(CartDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -52,6 +55,7 @@ public sealed class CartController : ControllerBase
     }
 
     /// <summary>Updates the quantity of a specific cart line item.</summary>
+    [AllowAnonymous]
     [HttpPut("items/{itemId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -69,6 +73,7 @@ public sealed class CartController : ControllerBase
     }
 
     /// <summary>Removes a line item from the cart.</summary>
+    [AllowAnonymous]
     [HttpDelete("items/{itemId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -84,6 +89,7 @@ public sealed class CartController : ControllerBase
     }
 
     /// <summary>Applies a coupon to the active cart.</summary>
+    [AllowAnonymous]
     [HttpPost("coupon")]
     [ProducesResponseType(typeof(CouponValidationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -101,6 +107,7 @@ public sealed class CartController : ControllerBase
     }
 
     /// <summary>Removes any applied coupon from the active cart.</summary>
+    [AllowAnonymous]
     [HttpDelete("coupon")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -117,7 +124,9 @@ public sealed class CartController : ControllerBase
 
     private Guid? GetUserId()
     {
-        string? sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+        string? sub =
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) ??
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return Guid.TryParse(sub, out Guid id) ? id : null;
     }
 

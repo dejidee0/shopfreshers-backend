@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace ShopFresherz.Application.Dtos.Product;
 
 /// <summary>Brand summary DTO used in product listings.</summary>
@@ -130,6 +133,12 @@ public class ProductSummaryDto
 
     /// <summary>Gets or sets the brand summary.</summary>
     public BrandDto? Brand { get; set; }
+
+    /// <summary>Gets or sets the category summary.</summary>
+    public CategoryDto? Category { get; set; }
+
+    /// <summary>Gets or sets the product image URLs supplied through admin product input.</summary>
+    public IReadOnlyList<string> ImageUrls { get; set; } = [];
 }
 
 /// <summary>Full product detail DTO for the Product Detail Page (PDP).</summary>
@@ -140,9 +149,6 @@ public sealed class ProductDetailDto : ProductSummaryDto
 
     /// <summary>Gets or sets the short marketing description.</summary>
     public string? ShortDescription { get; set; }
-
-    /// <summary>Gets or sets the category.</summary>
-    public CategoryDto? Category { get; set; }
 
     /// <summary>Gets or sets the product images ordered by SortOrder.</summary>
     public IReadOnlyList<ProductImageDto> Images { get; set; } = [];
@@ -170,6 +176,62 @@ public sealed class ProductDetailDto : ProductSummaryDto
 
     /// <summary>Gets or sets product SKU.</summary>
     public string SKU { get; set; } = string.Empty;
+}
+
+/// <summary>Request payload for creating a category (admin).</summary>
+public sealed class CreateCategoryRequest
+{
+    /// <summary>Gets or sets the category name.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the URL slug (auto-generated from name if omitted).</summary>
+    public string? Slug { get; set; }
+
+    /// <summary>Gets or sets the parent category ID (null = top-level).</summary>
+    public int? ParentId { get; set; }
+
+    /// <summary>Gets or sets the CDN URL for the category image.</summary>
+    public string? ImageUrl { get; set; }
+
+    /// <summary>Gets or sets the display sort order.</summary>
+    public int SortOrder { get; set; } = 0;
+
+    /// <summary>Gets or sets whether the category is visible on the storefront.</summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>Gets or sets the SEO meta title.</summary>
+    public string? MetaTitle { get; set; }
+
+    /// <summary>Gets or sets the SEO meta description.</summary>
+    public string? MetaDescription { get; set; }
+}
+
+/// <summary>Request payload for updating a category (admin). All fields optional.</summary>
+public sealed class UpdateCategoryRequest
+{
+    /// <summary>Gets or sets the updated name.</summary>
+    public string? Name { get; set; }
+
+    /// <summary>Gets or sets the updated slug.</summary>
+    public string? Slug { get; set; }
+
+    /// <summary>Gets or sets the updated parent category ID.</summary>
+    public int? ParentId { get; set; }
+
+    /// <summary>Gets or sets the updated image URL.</summary>
+    public string? ImageUrl { get; set; }
+
+    /// <summary>Gets or sets the updated sort order.</summary>
+    public int? SortOrder { get; set; }
+
+    /// <summary>Gets or sets the updated active flag.</summary>
+    public bool? IsActive { get; set; }
+
+    /// <summary>Gets or sets the updated SEO meta title.</summary>
+    public string? MetaTitle { get; set; }
+
+    /// <summary>Gets or sets the updated SEO meta description.</summary>
+    public string? MetaDescription { get; set; }
 }
 
 /// <summary>Request payload for creating a new product (admin).</summary>
@@ -217,6 +279,19 @@ public sealed class CreateProductRequest
     /// <summary>Gets or sets tags JSON array.</summary>
     public string? TagsJson { get; set; }
 
+    /// <summary>Gets or sets a single tag value from admin product forms.</summary>
+    public string? Tag
+    {
+        get => null;
+        set
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                TagsJson = JsonSerializer.Serialize(new[] { value.Trim() });
+            }
+        }
+    }
+
     /// <summary>Gets or sets a value indicating whether the product is active.</summary>
     public bool IsActive { get; set; } = true;
 
@@ -237,6 +312,7 @@ public sealed class UpdateProductRequest
     public string? Slug { get; set; }
 
     /// <summary>Gets or sets the updated brand ID.</summary>
+    [JsonConverter(typeof(NullableGuidStringConverter))]
     public Guid? BrandId { get; set; }
 
     /// <summary>Gets or sets the updated category ID.</summary>
@@ -269,6 +345,19 @@ public sealed class UpdateProductRequest
     /// <summary>Gets or sets the updated tags JSON.</summary>
     public string? TagsJson { get; set; }
 
+    /// <summary>Gets or sets a single tag value from admin product forms.</summary>
+    public string? Tag
+    {
+        get => null;
+        set
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                TagsJson = JsonSerializer.Serialize(new[] { value.Trim() });
+            }
+        }
+    }
+
     /// <summary>Gets or sets the updated active flag.</summary>
     public bool? IsActive { get; set; }
 
@@ -280,4 +369,45 @@ public sealed class UpdateProductRequest
 
     /// <summary>Gets or sets the updated SEO meta description.</summary>
     public string? MetaDescription { get; set; }
+}
+
+/// <summary>Converts nullable GUID JSON values while treating blank strings as null.</summary>
+public sealed class NullableGuidStringConverter : JsonConverter<Guid?>
+{
+    /// <inheritdoc />
+    public override Guid? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return null;
+        }
+
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            string? value = reader.GetString();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (Guid.TryParse(value, out Guid parsed))
+            {
+                return parsed;
+            }
+        }
+
+        throw new JsonException("The JSON value could not be converted to System.Nullable<System.Guid>.");
+    }
+
+    /// <inheritdoc />
+    public override void Write(Utf8JsonWriter writer, Guid? value, JsonSerializerOptions options)
+    {
+        if (value.HasValue)
+        {
+            writer.WriteStringValue(value.Value);
+            return;
+        }
+
+        writer.WriteNullValue();
+    }
 }

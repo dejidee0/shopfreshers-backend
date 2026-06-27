@@ -22,4 +22,10 @@ public interface ICategoryRepository
 
     /// <summary>Marks a category as modified.</summary>
     void Update(Category category);
+
+    /// <summary>Checks whether a category slug is already taken (optionally excluding one ID).</summary>
+    Task<bool> SlugExistsAsync(string slug, int? excludeId, CancellationToken cancellationToken = default);
+
+    /// <summary>Hard-deletes a category that has no children or products.</summary>
+    void Delete(Category category);
 }

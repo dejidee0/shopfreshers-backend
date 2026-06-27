@@ -11,6 +11,8 @@ using CartEntity = ShopFresherz.Domain.Entities.Cart;
 
 namespace ShopFresherz.Application.Features.Orders.Commands;
 
+internal sealed record OrderSourceItem(Guid ProductId, Guid? VariantId, int Quantity);
+
 /// <summary>Command for converting the active cart into a confirmed order.</summary>
 /// <param name="UserId">The authenticated user's ID (null for guest checkout).</param>
 /// <param name="Request">The order creation payload.</param>
@@ -22,21 +24,21 @@ public sealed class PlaceOrderCommandHandler
     : IRequestHandler<PlaceOrderCommand, Result<CreateOrderResponse>>
 {
     private readonly IUnitOfWork _uow;
-    private readonly IPaymentService _payment;
     private readonly IFlutterwavePaymentService _flutterwavePayment;
     private readonly IEmailService _email;
+    private readonly IBankTransferDetailsProvider _bankTransferDetails;
 
     /// <summary>Initialises the handler.</summary>
     public PlaceOrderCommandHandler(
         IUnitOfWork uow,
-        IPaymentService payment,
         IFlutterwavePaymentService flutterwavePayment,
-        IEmailService email)
+        IEmailService email,
+        IBankTransferDetailsProvider bankTransferDetails)
     {
         _uow = uow;
-        _payment = payment;
         _flutterwavePayment = flutterwavePayment;
         _email = email;
+        _bankTransferDetails = bankTransferDetails;
     }
 
     /// <inheritdoc />
@@ -53,7 +55,11 @@ public sealed class PlaceOrderCommandHandler
                 ? await _uow.Carts.GetBySessionIdAsync(req.GuestSessionId, cancellationToken)
                 : null;
 
-        if (cart is null || !cart.Items.Any())
+        List<OrderSourceItem> sourceItems = cart is not null && cart.Items.Any()
+            ? cart.Items.Select(i => new OrderSourceItem(i.ProductId, i.VariantId, i.Quantity)).ToList()
+            : req.Items.Select(i => new OrderSourceItem(i.ProductId, null, i.Quantity)).ToList();
+
+        if (!sourceItems.Any())
         {
             return Error.Validation("Cart is empty. Add items before placing an order.");
         }
@@ -79,69 +85,54 @@ public sealed class PlaceOrderCommandHandler
             return Error.Validation("A delivery address is required.");
         }
 
-        // Apply coupon.
-        decimal discount = 0m;
-        Coupon? coupon = null;
-        if (!string.IsNullOrWhiteSpace(req.CouponCode))
-        {
-            coupon = await _uow.Coupons.GetByCodeAsync(req.CouponCode, cancellationToken);
-            if (coupon is not null && coupon.IsActive && (coupon.ExpiresAt is null || coupon.ExpiresAt > DateTime.UtcNow))
-            {
-                decimal subtotal = cart.Items.Sum(i =>
-                    (i.Variant?.Price ?? i.Product.Price) * i.Quantity);
-
-                if (coupon.MinimumOrderAmount is null || subtotal >= coupon.MinimumOrderAmount)
-                {
-                    discount = coupon.Type == Domain.Enums.CouponType.Percentage
-                        ? subtotal * (coupon.Value / 100m)
-                        : coupon.Value;
-                }
-            }
-        }
-
         // Build order items + reserve stock.
         List<OrderItem> items = new();
         decimal itemsSubtotal = 0m;
 
-        foreach (CartItem ci in cart.Items)
+        foreach (OrderSourceItem sourceItem in sourceItems)
         {
-            Product? product = await _uow.Products.GetByIdWithLockAsync(ci.ProductId, cancellationToken);
-            if (product is null) return Error.NotFound($"Product {ci.ProductId}");
+            if (sourceItem.Quantity <= 0)
+            {
+                return Error.Validation("Order item quantity must be greater than zero.");
+            }
 
-            decimal unitPrice = ci.VariantId.HasValue
-                ? product.Variants.FirstOrDefault(v => v.Id == ci.VariantId)?.Price ?? product.Price
+            Product? product = await _uow.Products.GetByIdWithLockAsync(sourceItem.ProductId, cancellationToken);
+            if (product is null) return Error.NotFound($"Product {sourceItem.ProductId}");
+
+            decimal unitPrice = sourceItem.VariantId.HasValue
+                ? product.Variants.FirstOrDefault(v => v.Id == sourceItem.VariantId)?.Price ?? product.Price
                 : product.Price;
 
-            int availableQty = ci.VariantId.HasValue
-                ? product.Variants.FirstOrDefault(v => v.Id == ci.VariantId)?.AvailableQty ?? 0
+            int availableQty = sourceItem.VariantId.HasValue
+                ? product.Variants.FirstOrDefault(v => v.Id == sourceItem.VariantId)?.AvailableQty ?? 0
                 : product.AvailableQty;
 
-            if (availableQty < ci.Quantity)
+            if (availableQty < sourceItem.Quantity)
             {
                 return Error.Validation($"Insufficient stock for '{product.Name}'. Only {availableQty} unit(s) available.");
             }
 
             // Reserve stock.
-            if (ci.VariantId.HasValue)
+            if (sourceItem.VariantId.HasValue)
             {
-                ProductVariant? variant = product.Variants.FirstOrDefault(v => v.Id == ci.VariantId);
-                if (variant is not null) variant.ReservedQty += ci.Quantity;
+                ProductVariant? variant = product.Variants.FirstOrDefault(v => v.Id == sourceItem.VariantId);
+                if (variant is not null) variant.ReservedQty += sourceItem.Quantity;
             }
             else
             {
-                product.ReservedQty += ci.Quantity;
+                product.ReservedQty += sourceItem.Quantity;
             }
 
             _uow.Products.Update(product);
 
-            decimal lineTotal = unitPrice * ci.Quantity;
+            decimal lineTotal = unitPrice * sourceItem.Quantity;
             itemsSubtotal += lineTotal;
 
             items.Add(new OrderItem
             {
-                ProductId   = ci.ProductId,
-                VariantId   = ci.VariantId,
-                Quantity    = ci.Quantity,
+                ProductId   = sourceItem.ProductId,
+                VariantId   = sourceItem.VariantId,
+                Quantity    = sourceItem.Quantity,
                 UnitPrice   = unitPrice,
                 LineTotal   = lineTotal,
                 ProductSnapshotJson = JsonSerializer.Serialize(new
@@ -154,7 +145,29 @@ public sealed class PlaceOrderCommandHandler
             });
         }
 
-        decimal deliveryFee = req.DeliveryMethod == DeliveryMethod.Express ? 3500m : 1500m;
+        // Apply coupon.
+        decimal discount = 0m;
+        Coupon? coupon = null;
+        if (!string.IsNullOrWhiteSpace(req.CouponCode))
+        {
+            coupon = await _uow.Coupons.GetByCodeAsync(req.CouponCode, cancellationToken);
+            if (coupon is not null && coupon.IsActive && (coupon.ExpiresAt is null || coupon.ExpiresAt > DateTime.UtcNow))
+            {
+                if (coupon.MinimumOrderAmount is null || itemsSubtotal >= coupon.MinimumOrderAmount)
+                {
+                    discount = coupon.Type == Domain.Enums.CouponType.Percentage
+                        ? itemsSubtotal * (coupon.Value / 100m)
+                        : coupon.Value;
+                }
+            }
+        }
+
+        decimal deliveryFee = req.DeliveryMethod switch
+        {
+            DeliveryMethod.Express => 3500m,
+            DeliveryMethod.Pickup  => 0m,
+            _                      => 1500m,
+        };
         decimal vatAmount   = (itemsSubtotal - discount) * 0.075m;
         decimal total       = itemsSubtotal - discount + deliveryFee + vatAmount;
 
@@ -189,48 +202,43 @@ public sealed class PlaceOrderCommandHandler
             _uow.Coupons.Update(coupon);
         }
 
-        // Clear the cart.
-        cart.Items.Clear();
-        _uow.Carts.Update(cart);
+        // Clear the cart when this order was created from a backend cart.
+        if (cart is not null)
+        {
+            cart.Items.Clear();
+            _uow.Carts.Update(cart);
+        }
 
         await _uow.SaveChangesAsync(cancellationToken);
 
         // Initiate payment.
         string? paymentUrl  = null;
         string? paymentRef  = null;
+        BankDetailsDto? bankDetails = null;
 
-        if (req.PaymentMethod != PaymentMethod.PayOnDelivery)
+        if (req.PaymentMethod == PaymentMethod.BankTransfer)
+        {
+            BankTransferDetails details = _bankTransferDetails.GetDetails();
+            bankDetails = new BankDetailsDto
+            {
+                BankName = details.BankName,
+                AccountNumber = details.AccountNumber,
+                AccountName = details.AccountName,
+            };
+        }
+        else if (req.PaymentMethod is PaymentMethod.Card or PaymentMethod.USSD)
         {
             string recipientEmail = command.UserId.HasValue
                 ? (await _uow.Users.GetByIdAsync(command.UserId.Value, cancellationToken))?.Email ?? req.GuestEmail ?? string.Empty
                 : req.GuestEmail ?? string.Empty;
 
-            long amountKobo = (long)(total * 100);
-
-            Domain.Interfaces.Services.PaymentInitResult? payResult = null;
-            try
-            {
-                payResult = await _payment.InitialiseAsync(
-                    recipientEmail,
-                    amountKobo,
-                    orderNumber,
-                    $"https://shopfresherz.com/checkout/verify?ref={orderNumber}",
-                    cancellationToken);
-            }
-            catch
-            {
-                payResult = null;
-            }
-
-            if (payResult is null)
-            {
-                payResult = await _flutterwavePayment.InitializeAsync(
+            Domain.Interfaces.Services.PaymentInitResult? payResult =
+                await _flutterwavePayment.InitializeAsync(
                     recipientEmail,
                     order.Id,
                     orderNumber,
                     total,
                     cancellationToken);
-            }
 
             if (payResult is null)
             {
@@ -258,6 +266,7 @@ public sealed class PlaceOrderCommandHandler
             OrderNumber      = orderNumber,
             PaymentUrl       = paymentUrl,
             PaymentReference = paymentRef,
+            BankDetails      = bankDetails,
             Total            = total,
         });
     }

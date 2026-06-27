@@ -50,6 +50,18 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Gets the homepage banner repository.</summary>
     IHomepageBannerRepository HomepageBanners { get; }
 
+    /// <summary>Gets the application settings repository.</summary>
+    IAppSettingRepository AppSettings { get; }
+
+    /// <summary>Gets the payment method repository.</summary>
+    IPaymentMethodRepository PaymentMethods { get; }
+
+    /// <summary>Gets the featured section repository.</summary>
+    IFeaturedSectionRepository FeaturedSections { get; }
+
+    /// <summary>Gets the promotional sections repository.</summary>
+    IPromotionalSectionRepository PromotionalSections { get; }
+
     /// <summary>
     /// Commits all pending changes to the database atomically.
     /// Returns the number of state entries written to the database.

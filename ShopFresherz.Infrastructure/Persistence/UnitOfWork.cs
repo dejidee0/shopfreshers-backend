@@ -27,6 +27,10 @@ public sealed class UnitOfWork : IUnitOfWork
     private INotificationRepository? _notifications;
     private INotifyRequestRepository? _notifyRequests;
     private IHomepageBannerRepository? _homepageBanners;
+    private IAppSettingRepository? _appSettings;
+    private IPaymentMethodRepository? _paymentMethods;
+    private IFeaturedSectionRepository? _featuredSections;
+    private IPromotionalSectionRepository? _promotionalSections;
 
     /// <summary>Initialises a new instance of <see cref="UnitOfWork"/>.</summary>
     public UnitOfWork(ShopFresherzDbContext context)
@@ -93,6 +97,22 @@ public sealed class UnitOfWork : IUnitOfWork
     /// <inheritdoc />
     public IHomepageBannerRepository HomepageBanners =>
         _homepageBanners ??= new EfHomepageBannerRepository(_context);
+
+    /// <inheritdoc />
+    public IAppSettingRepository AppSettings =>
+        _appSettings ??= new EfAppSettingRepository(_context);
+
+    /// <inheritdoc />
+    public IPaymentMethodRepository PaymentMethods =>
+        _paymentMethods ??= new EfPaymentMethodRepository(_context);
+
+    /// <inheritdoc />
+    public IFeaturedSectionRepository FeaturedSections =>
+        _featuredSections ??= new EfFeaturedSectionRepository(_context);
+
+    /// <inheritdoc />
+    public IPromotionalSectionRepository PromotionalSections =>
+        _promotionalSections ??= new EfPromotionalSectionRepository(_context);
 
     /// <inheritdoc />
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

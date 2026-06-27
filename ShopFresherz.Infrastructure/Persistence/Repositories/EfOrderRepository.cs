@@ -42,6 +42,14 @@ internal sealed class EfOrderRepository : IOrderRepository
     }
 
     /// <inheritdoc />
+    public async Task<Order?> GetByTxRefAsync(string txRef, CancellationToken cancellationToken = default)
+    {
+        return await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.TxRef == txRef, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<(IReadOnlyList<Order> Items, int TotalCount)> GetUserOrdersAsync(
         Guid userId,
         int page,

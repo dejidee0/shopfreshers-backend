@@ -17,6 +17,9 @@ public interface ICouponRepository
     /// <summary>Returns the number of times a user has used a specific coupon.</summary>
     Task<int> GetUserUsageCountAsync(int couponId, Guid userId, CancellationToken cancellationToken = default);
 
+    /// <summary>Returns all coupons ordered by creation date descending.</summary>
+    Task<IReadOnlyList<Coupon>> GetAllAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Adds a new coupon.</summary>
     Task AddAsync(Coupon coupon, CancellationToken cancellationToken = default);
 

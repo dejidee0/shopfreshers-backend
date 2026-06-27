@@ -21,6 +21,7 @@ public sealed class FlashDealsController : ControllerBase
     }
 
     /// <summary>Returns currently active flash deals.</summary>
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<FlashDealDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetActive(CancellationToken cancellationToken)

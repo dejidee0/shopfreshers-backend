@@ -28,5 +28,11 @@ public enum OrderStatus
     RefundRequested = 7,
 
     /// <summary>Refund approved; stock restocked; gateway refund processed.</summary>
-    Refunded = 8
+    Refunded = 8,
+
+    /// <summary>
+    /// Order created in the two-step checkout flow; stock reserved; awaiting the
+    /// frontend to complete the Flutterwave inline popup and call confirm-order.
+    /// </summary>
+    Draft = 9
 }

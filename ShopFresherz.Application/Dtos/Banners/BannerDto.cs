@@ -8,6 +8,7 @@ public sealed record BannerDto(
     string? LinkUrl,
     string? SubTitle,
     string? CtaText,
+    string? Tag,
     int SortOrder);
 
 /// <summary>Create banner request payload.</summary>
@@ -17,6 +18,7 @@ public sealed record CreateBannerRequest(
     string? LinkUrl,
     string? SubTitle,
     string? CtaText,
+    string? Tag,
     int SortOrder,
     bool IsActive,
     DateTime? StartsAt,
@@ -29,6 +31,7 @@ public sealed record UpdateBannerRequest(
     string? LinkUrl,
     string? SubTitle,
     string? CtaText,
+    string? Tag,
     int? SortOrder,
     bool? IsActive,
     DateTime? StartsAt,

@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Application.Features.Search.Queries;
@@ -19,6 +20,7 @@ public sealed class SearchController : ControllerBase
     }
 
     /// <summary>Searches active products with optional filters and sorting.</summary>
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(SearchResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> Search(
@@ -40,6 +42,7 @@ public sealed class SearchController : ControllerBase
     }
 
     /// <summary>Returns quick product and category suggestions for typeahead search.</summary>
+    [AllowAnonymous]
     [HttpGet("instant")]
     [ResponseCache(Duration = 120, Location = ResponseCacheLocation.Any)]
     [ProducesResponseType(typeof(InstantSearchResult), StatusCodes.Status200OK)]

@@ -71,6 +71,7 @@ internal sealed class EfProductRepository : IProductRepository
         IQueryable<Product> query = _context.Products
             .Include(p => p.Images)
             .Include(p => p.Brand)
+            .Include(p => p.Category)
             .Where(p => p.IsActive);
 
         if (categoryId.HasValue)
@@ -124,6 +125,8 @@ internal sealed class EfProductRepository : IProductRepository
 
         return await _context.Products
             .Include(p => p.Images)
+            .Include(p => p.Brand)
+            .Include(p => p.Category)
             .Where(p => p.IsActive && p.CreatedAt >= cutoff)
             .OrderByDescending(p => p.CreatedAt)
             .Take(limit)
@@ -137,6 +140,8 @@ internal sealed class EfProductRepository : IProductRepository
         // Include only products where CompareAtPrice is meaningful.
         return await _context.Products
             .Include(p => p.Images)
+            .Include(p => p.Brand)
+            .Include(p => p.Category)
             .Where(p => p.IsActive && p.CompareAtPrice != null && p.CompareAtPrice > p.Price)
             .OrderByDescending(p => (p.CompareAtPrice!.Value - p.Price) / p.CompareAtPrice!.Value)
             .Take(limit)

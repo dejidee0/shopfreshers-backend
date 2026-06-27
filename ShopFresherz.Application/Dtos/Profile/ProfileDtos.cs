@@ -129,6 +129,31 @@ public sealed class ChangePasswordRequest
     public string ConfirmNewPassword { get; set; } = string.Empty;
 }
 
+/// <summary>Request payload for updating a saved address (all fields optional).</summary>
+public sealed class UpdateAddressRequest
+{
+    /// <summary>Gets or sets the updated address label.</summary>
+    public string? Label { get; set; }
+
+    /// <summary>Gets or sets the updated first address line.</summary>
+    public string? Line1 { get; set; }
+
+    /// <summary>Gets or sets the updated second address line.</summary>
+    public string? Line2 { get; set; }
+
+    /// <summary>Gets or sets the updated city.</summary>
+    public string? City { get; set; }
+
+    /// <summary>Gets or sets the updated Nigerian state.</summary>
+    public string? State { get; set; }
+
+    /// <summary>Gets or sets the updated postal code.</summary>
+    public string? PostalCode { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether this should be the default address.</summary>
+    public bool? IsDefault { get; set; }
+}
+
 /// <summary>Request payload for adding a new saved address.</summary>
 public sealed class CreateAddressRequest
 {

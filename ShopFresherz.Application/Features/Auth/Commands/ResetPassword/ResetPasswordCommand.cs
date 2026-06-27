@@ -4,6 +4,8 @@ using ShopFresherz.Application.Common;
 using ShopFresherz.Domain.Entities;
 using ShopFresherz.Domain.Interfaces;
 using ShopFresherz.Domain.Interfaces.Services;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ShopFresherz.Application.Features.Auth.Commands.ResetPassword;
 
@@ -15,14 +17,12 @@ public sealed record ResetPasswordCommand(Dtos.Auth.ResetPasswordRequest Request
 public sealed class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand, Result<bool>>
 {
     private readonly IUnitOfWork _uow;
-    private readonly ICacheService _cache;
     private readonly IPasswordHasher _hasher;
 
     /// <summary>Initialises the handler.</summary>
-    public ResetPasswordCommandHandler(IUnitOfWork uow, ICacheService cache, IPasswordHasher hasher)
+    public ResetPasswordCommandHandler(IUnitOfWork uow, IPasswordHasher hasher)
     {
         _uow = uow;
-        _cache = cache;
         _hasher = hasher;
     }
 
@@ -32,33 +32,44 @@ public sealed class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordC
         CancellationToken cancellationToken)
     {
         string email = command.Request.Email.Trim().ToLowerInvariant();
-        string cacheKey = $"otp:reset:{email}";
+        User? user = await _uow.Users.GetByEmailAsync(email, cancellationToken);
+        if (user is null)
+        {
+            return Error.Validation("Invalid or expired OTP.");
+        }
 
-        string? storedOtp = await _cache.GetAsync<string>(cacheKey, cancellationToken);
-        if (storedOtp is null)
+        if (string.IsNullOrWhiteSpace(user.PasswordResetOtpHash) ||
+            user.PasswordResetOtpExpires is null ||
+            user.PasswordResetOtpExpires <= DateTime.UtcNow)
         {
             return Error.Validation("Reset OTP has expired. Please request a new one.");
         }
 
-        if (!string.Equals(storedOtp, command.Request.Otp.Trim(), StringComparison.Ordinal))
+        byte[] suppliedHash = SHA256.HashData(
+            Encoding.UTF8.GetBytes(command.Request.Otp.Trim()));
+        byte[] storedHash;
+        try
         {
-            return Error.Validation("Invalid OTP.");
+            storedHash = Convert.FromHexString(user.PasswordResetOtpHash);
+        }
+        catch (FormatException)
+        {
+            return Error.Validation("Invalid or expired OTP.");
         }
 
-        User? user = await _uow.Users.GetByEmailAsync(email, cancellationToken);
-        if (user is null)
+        if (!CryptographicOperations.FixedTimeEquals(storedHash, suppliedHash))
         {
-            return Error.NotFound("User");
+            return Error.Validation("Invalid OTP.");
         }
 
         user.PasswordHash      = _hasher.Hash(command.Request.NewPassword);
         user.RefreshTokenHash   = null;
         user.RefreshTokenExpires = null;
+        user.PasswordResetOtpHash = null;
+        user.PasswordResetOtpExpires = null;
 
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync(cancellationToken);
-
-        await _cache.RemoveAsync(cacheKey, cancellationToken);
 
         return Result<bool>.Success(true);
     }

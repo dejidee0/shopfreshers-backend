@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Application.Dtos.Banners;
@@ -19,6 +20,7 @@ public sealed class BannersController : ControllerBase
     }
 
     /// <summary>Returns active homepage banners for the storefront carousel.</summary>
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<BannerDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetActive(CancellationToken cancellationToken)

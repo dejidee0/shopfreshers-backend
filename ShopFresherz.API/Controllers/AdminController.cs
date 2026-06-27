@@ -132,6 +132,107 @@ public sealed class AdminController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
     }
 
+    /// <summary>Returns all admin-configurable store settings.</summary>
+    [HttpGet("settings")]
+    [ProducesResponseType(typeof(AdminSettingsDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Settings(CancellationToken cancellationToken)
+    {
+        Result<object> result = await _mediator.Send(
+            new GetAdminSettingsQuery(), cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
+    }
+
+    /// <summary>Returns one admin settings section, such as store, payment, shipping, notifications, seo, or maintenance.</summary>
+    [HttpGet("settings/{section}")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SettingsSection(
+        [FromRoute] string section,
+        CancellationToken cancellationToken)
+    {
+        Result<object> result = await _mediator.Send(
+            new GetAdminSettingsQuery(section), cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
+    }
+
+    /// <summary>Updates one or more admin settings sections.</summary>
+    [HttpPut("settings")]
+    [ProducesResponseType(typeof(AdminSettingsDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateSettings(
+        [FromBody] AdminSettingsUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result<AdminSettingsDto> result = await _mediator.Send(
+            new UpdateAdminSettingsCommand(request), cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _ = _auditLog.LogAsync(
+                GetUserId(),
+                "settings_changed",
+                "AppSettings",
+                "multiple",
+                newValues: System.Text.Json.JsonSerializer.Serialize(request),
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken: CancellationToken.None);
+        }
+
+        return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
+    }
+
+    /// <summary>Replaces one admin settings section independently.</summary>
+    [HttpPut("settings/{section}")]
+    [ProducesResponseType(typeof(AdminSettingsDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateSettingsSection(
+        [FromRoute] string section,
+        [FromBody] AdminSettingsSectionUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result<AdminSettingsDto> result = await _mediator.Send(
+            new UpdateAdminSettingsSectionCommand(section, request.Value), cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _ = _auditLog.LogAsync(
+                GetUserId(),
+                "settings_changed",
+                "AppSettings",
+                section,
+                newValues: request.Value.GetRawText(),
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken: CancellationToken.None);
+        }
+
+        return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
+    }
+
+    /// <summary>Updates one admin settings section independently.</summary>
+    [HttpPatch("settings/{section}")]
+    [ProducesResponseType(typeof(AdminSettingsDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> PatchSettingsSection(
+        [FromRoute] string section,
+        [FromBody] AdminSettingsSectionUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result<AdminSettingsDto> result = await _mediator.Send(
+            new UpdateAdminSettingsSectionCommand(section, request.Value), cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _ = _auditLog.LogAsync(
+                GetUserId(),
+                "settings_changed",
+                "AppSettings",
+                section,
+                newValues: request.Value.GetRawText(),
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken: CancellationToken.None);
+        }
+
+        return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
+    }
+
     /// <summary>Updates an order status.</summary>
     [HttpPut("orders/{orderNumber}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

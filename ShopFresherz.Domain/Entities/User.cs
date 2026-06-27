@@ -47,6 +47,12 @@ public class User : BaseEntity
     /// <summary>Gets or sets the UTC timestamp of the user's last successful login.</summary>
     public DateTime? LastLoginAt { get; set; }
 
+    /// <summary>Gets or sets the SHA-256 hash of the active password-reset OTP.</summary>
+    public string? PasswordResetOtpHash { get; set; }
+
+    /// <summary>Gets or sets the UTC expiry of the active password-reset OTP.</summary>
+    public DateTime? PasswordResetOtpExpires { get; set; }
+
     /// <summary>Gets or sets the collection of orders placed by this user.</summary>
     public ICollection<Order> Orders { get; set; } = new List<Order>();
 
@@ -61,6 +67,9 @@ public class User : BaseEntity
 
     /// <summary>Gets or sets the loyalty points transaction history.</summary>
     public ICollection<LoyaltyTransaction> LoyaltyTransactions { get; set; } = new List<LoyaltyTransaction>();
+
+    /// <summary>Gets or sets the collection of saved bank cards.</summary>
+    public ICollection<SavedCard> SavedCards { get; set; } = new List<SavedCard>();
 
     /// <summary>Gets or sets whether order update notifications are enabled.</summary>
     public bool NotificationOrderUpdates { get; set; } = true;

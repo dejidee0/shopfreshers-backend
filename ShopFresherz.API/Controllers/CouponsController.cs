@@ -20,6 +20,18 @@ public sealed class CouponsController : ControllerBase
         _mediator = mediator;
     }
 
+    /// <summary>Returns all coupons. Requires Admin role.</summary>
+    [Authorize(Policy = "RequireAdmin")]
+    [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<CouponDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    {
+        Result<IReadOnlyList<CouponDto>> result = await _mediator.Send(
+            new GetAllCouponsQuery(), cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
+    }
+
     /// <summary>Validates a coupon against an order subtotal.</summary>
     [HttpGet("validate")]
     [ProducesResponseType(typeof(CouponValidationDto), StatusCodes.Status200OK)]

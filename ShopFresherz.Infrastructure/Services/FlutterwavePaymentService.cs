@@ -25,6 +25,9 @@ public sealed class FlutterwavePaymentService : IFlutterwavePaymentService
         _logger = logger;
     }
 
+    /// <inheritdoc />
+    public string PublicKey => _options.PublicKey;
+
     /// <summary>Initialises a Flutterwave hosted payment and returns the payment link.</summary>
     public async Task<PaymentInitResult?> InitializeAsync(
         string email,
@@ -84,6 +87,51 @@ public sealed class FlutterwavePaymentService : IFlutterwavePaymentService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Flutterwave exception for order {OrderNumber}", orderNumber);
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<FlutterwaveVerificationResult?> VerifyAsync(
+        string transactionId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using HttpRequestMessage request = new(
+                HttpMethod.Get,
+                $"https://api.flutterwave.com/v3/transactions/{transactionId}/verify");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.SecretKey);
+
+            HttpResponseMessage response = await _http.SendAsync(request, cancellationToken);
+
+            string raw = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Flutterwave verify failed for transaction {TransactionId}: {Status} {Body}",
+                    transactionId,
+                    response.StatusCode,
+                    raw);
+                return null;
+            }
+
+            using JsonDocument doc = JsonDocument.Parse(raw);
+            if (!doc.RootElement.TryGetProperty("data", out JsonElement data))
+            {
+                return null;
+            }
+
+            string status = data.TryGetProperty("status", out JsonElement s) ? s.GetString() ?? string.Empty : string.Empty;
+            string txRef = data.TryGetProperty("tx_ref", out JsonElement t) ? t.GetString() ?? string.Empty : string.Empty;
+            decimal amount = data.TryGetProperty("amount", out JsonElement a) ? a.GetDecimal() : 0m;
+            string currency = data.TryGetProperty("currency", out JsonElement c) ? c.GetString() ?? string.Empty : string.Empty;
+
+            return new FlutterwaveVerificationResult(status, txRef, amount, currency);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Flutterwave verify exception for transaction {TransactionId}", transactionId);
             return null;
         }
     }

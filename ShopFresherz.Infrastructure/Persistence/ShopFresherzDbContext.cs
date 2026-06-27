@@ -81,6 +81,18 @@ public class ShopFresherzDbContext : DbContext
     /// <summary>Gets or sets the HomepageBanners table.</summary>
     public DbSet<HomepageBanner> HomepageBanners => Set<HomepageBanner>();
 
+    /// <summary>Gets or sets the AppSettings table.</summary>
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+
+    /// <summary>Gets or sets the SavedCards (bank cards) table.</summary>
+    public DbSet<SavedCard> SavedCards => Set<SavedCard>();
+
+    /// <summary>Gets or sets the FeaturedSections table.</summary>
+    public DbSet<FeaturedSection> FeaturedSections => Set<FeaturedSection>();
+
+    /// <summary>Gets or sets the PromotionalSections table.</summary>
+    public DbSet<PromotionalSection> PromotionalSections => Set<PromotionalSection>();
+
     // ── Model configuration ─────────────────────────────────────────────────
 
     /// <inheritdoc />

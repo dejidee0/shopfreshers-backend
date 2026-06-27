@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using ShopFresherz.Application.Common.Mappings;
+using ShopFresherz.Application.Features.Payments.Services;
 using System.Reflection;
 
 namespace ShopFresherz.Application.Common.Extensions;
@@ -29,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddValidatorsFromAssembly(assembly);
 
         services.AddAutoMapper(typeof(MappingProfile));
+        services.AddScoped<IOrderPaymentConfirmationService, OrderPaymentConfirmationService>();
 
         return services;
     }

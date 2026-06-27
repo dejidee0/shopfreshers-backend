@@ -73,7 +73,7 @@ public sealed class TokenService : ITokenService
             audience: _audience,
             claims: claims,
             notBefore: DateTime.UtcNow,
-            expires: DateTime.UtcNow.AddMinutes(15),
+            expires: DateTime.UtcNow.AddHours(24),
             signingCredentials: credentials);
 
         return _handler.WriteToken(token);

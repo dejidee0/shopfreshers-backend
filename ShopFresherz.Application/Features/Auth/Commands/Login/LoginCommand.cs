@@ -65,7 +65,7 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<A
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            ExpiresAt = DateTime.UtcNow.AddHours(24),
             User = _mapper.Map<UserDto>(user)
         };
 

@@ -78,7 +78,7 @@ public sealed class CreateFlashDealCommandHandler
         CancellationToken cancellationToken)
     {
         if (salePrice <= 0) return Error.Validation("Sale price must be greater than zero.");
-        if (startsAt <= DateTime.UtcNow) return Error.Validation("Start date must be in the future.");
+        if (endsAt <= DateTime.UtcNow) return Error.Validation("End date must be in the future.");
         if (endsAt <= startsAt) return Error.Validation("End date must be after start date.");
         if (maxQuantity.HasValue && maxQuantity.Value <= 0) return Error.Validation("Max quantity must be greater than zero.");
 

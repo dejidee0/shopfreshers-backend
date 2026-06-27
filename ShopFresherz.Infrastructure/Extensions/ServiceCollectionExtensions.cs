@@ -69,19 +69,26 @@ public static class ServiceCollectionExtensions
         }
 
         // ── HTTP clients for third-party services ─────────────────────────────
-        services.AddHttpClient(nameof(PaystackPaymentService));
         services.Configure<FlutterwaveOptions>(configuration.GetSection("Flutterwave"));
         services.AddHttpClient<IFlutterwavePaymentService, FlutterwavePaymentService>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(15);
         });
+        services.Configure<BankTransferSettings>(configuration.GetSection("BankTransfer"));
+        services.AddSingleton<IBankTransferDetailsProvider, BankTransferDetailsProvider>();
 
         // ── Token / Auth ───────────────────────────────────────────────────────
         services.AddSingleton<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+        services.Configure<GoogleAuthSettings>(configuration.GetSection("GoogleAuth"));
+        services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
 
         // ── Email ──────────────────────────────────────────────────────────────
-        services.AddTransient<IEmailService, SendGridEmailService>();
+        services.Configure<BrevoSettings>(configuration.GetSection("Brevo"));
+        services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
         services.AddScoped<IAuditLogService, EfAuditLogService>();
 
         // ── SMS ────────────────────────────────────────────────────────────────
@@ -102,7 +109,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationRepository, EfNotificationRepository>();
 
         // ── Payment gateway ────────────────────────────────────────────────────
-        services.AddTransient<IPaymentService, PaystackPaymentService>();
 
         // ── Chatbot ────────────────────────────────────────────────────────────
         services.AddScoped<IChatbotService, ChatbotService>();

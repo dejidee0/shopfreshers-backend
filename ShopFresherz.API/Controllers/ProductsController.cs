@@ -22,6 +22,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     /// <summary>Returns a paginated product listing with optional filters.</summary>
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ProductSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetProducts(
@@ -44,6 +45,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     /// <summary>Returns full product detail for the product detail page (PDP).</summary>
+    [AllowAnonymous]
     [HttpGet("{slug}")]
     [ProducesResponseType(typeof(ProductDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -71,7 +73,7 @@ public sealed class ProductsController : ControllerBase
             await _mediator.Send(new CreateProductCommand(request), cancellationToken);
 
         return result.IsSuccess
-            ? CreatedAtAction(nameof(GetBySlug), new { slug = string.Empty }, new { id = result.Value })
+            ? StatusCode(StatusCodes.Status201Created, new { id = result.Value })
             : MapError(result.Error);
     }
 

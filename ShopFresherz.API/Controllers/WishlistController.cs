@@ -63,7 +63,9 @@ public sealed class WishlistController : ControllerBase
 
     private Guid GetUserId()
     {
-        string? sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+        string? sub =
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) ??
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return Guid.TryParse(sub, out Guid id) ? id : Guid.Empty;
     }
 

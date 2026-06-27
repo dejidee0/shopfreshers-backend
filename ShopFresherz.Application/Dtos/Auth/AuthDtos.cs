@@ -81,6 +81,12 @@ public sealed class LoginRequest
     public string Password { get; set; } = string.Empty;
 }
 
+/// <summary>Request payload for Google ID-token sign-in.</summary>
+public sealed class GoogleSignInRequest
+{
+    public string IdToken { get; set; } = string.Empty;
+}
+
 /// <summary>Request payload for access token refresh.</summary>
 public sealed class RefreshTokenRequest
 {

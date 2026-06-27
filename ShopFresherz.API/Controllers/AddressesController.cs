@@ -50,6 +50,22 @@ public sealed class AddressesController : ControllerBase
             : MapError(result.Error);
     }
 
+    /// <summary>Updates a saved delivery address by ID.</summary>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(
+        [FromRoute] Guid id,
+        [FromBody] UpdateAddressRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result<bool> result = await _mediator.Send(
+            new UpdateAddressCommand(GetUserId(), id, request), cancellationToken);
+
+        return result.IsSuccess ? NoContent() : MapError(result.Error);
+    }
+
     /// <summary>Soft-deletes a saved address by ID.</summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -67,7 +83,9 @@ public sealed class AddressesController : ControllerBase
 
     private Guid GetUserId()
     {
-        string? sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+        string? sub =
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) ??
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return Guid.TryParse(sub, out Guid id) ? id : Guid.Empty;
     }
 

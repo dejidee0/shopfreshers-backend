@@ -16,6 +16,7 @@ public sealed class HomepageBannerConfiguration : IEntityTypeConfiguration<Homep
         builder.Property(x => x.LinkUrl).HasMaxLength(1000);
         builder.Property(x => x.SubTitle).HasMaxLength(300);
         builder.Property(x => x.CtaText).HasMaxLength(80);
+        builder.Property(x => x.Tag).HasMaxLength(100);
         builder.HasIndex(x => new { x.IsActive, x.SortOrder });
         builder.HasQueryFilter(x => x.DeletedAt == null);
     }

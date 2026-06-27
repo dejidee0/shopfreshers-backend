@@ -31,14 +31,18 @@ public sealed class MappingProfile : Profile
                     ? s.Images.OrderBy(i => i.SortOrder).First().DisplayUrl
                     : null))
             .ForMember(d => d.AvailableQty, opt => opt.MapFrom(s => s.AvailableQty))
-            .ForMember(d => d.Brand, opt => opt.MapFrom(s => s.Brand));
+            .ForMember(d => d.Brand, opt => opt.MapFrom(s => s.Brand))
+            .ForMember(d => d.Category, opt => opt.MapFrom(s => s.Category))
+            .ForMember(d => d.ImageUrls, opt => opt.MapFrom(s =>
+                s.ImageUrls.Count > 0
+                    ? s.ImageUrls
+                    : s.Images.OrderBy(i => i.SortOrder).Select(i => i.DisplayUrl).ToList()));
 
         CreateMap<Product, ProductDetailDto>()
             .IncludeBase<Product, ProductSummaryDto>()
             .ForMember(d => d.Images, opt => opt.MapFrom(
                 s => s.Images.OrderBy(i => i.SortOrder).ToList()))
-            .ForMember(d => d.Variants, opt => opt.MapFrom(s => s.Variants))
-            .ForMember(d => d.Category, opt => opt.MapFrom(s => s.Category));
+            .ForMember(d => d.Variants, opt => opt.MapFrom(s => s.Variants));
 
         // ── Cart ─────────────────────────────────────────────────────────────
         CreateMap<CartItem, CartItemDto>()

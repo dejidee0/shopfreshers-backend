@@ -23,6 +23,7 @@ public sealed class OrdersController : ControllerBase
     }
 
     /// <summary>Places a new order from the active cart.</summary>
+    [AllowAnonymous]
     [HttpPost]
     [ProducesResponseType(typeof(CreateOrderResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -55,6 +56,7 @@ public sealed class OrdersController : ControllerBase
     }
 
     /// <summary>Returns full detail of a single order by its order number.</summary>
+    [AllowAnonymous]
     [HttpGet("{orderNumber}")]
     [ProducesResponseType(typeof(OrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -86,13 +88,17 @@ public sealed class OrdersController : ControllerBase
 
     private Guid? GetUserId()
     {
-        string? sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+        string? sub =
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) ??
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return Guid.TryParse(sub, out Guid id) ? id : null;
     }
 
     private Guid GetRequiredUserId()
     {
-        string? sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+        string? sub =
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) ??
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return Guid.TryParse(sub, out Guid id) ? id : Guid.Empty;
     }
 

@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Application.Dtos.Product;
@@ -20,6 +21,7 @@ public sealed class BrandsController : ControllerBase
     }
 
     /// <summary>Returns all active brands.</summary>
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<BrandDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)

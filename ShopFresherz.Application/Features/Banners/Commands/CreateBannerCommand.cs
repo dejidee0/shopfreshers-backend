@@ -35,6 +35,7 @@ public sealed class CreateBannerCommandHandler : IRequestHandler<CreateBannerCom
             LinkUrl = string.IsNullOrWhiteSpace(request.LinkUrl) ? null : request.LinkUrl.Trim(),
             SubTitle = string.IsNullOrWhiteSpace(request.SubTitle) ? null : request.SubTitle.Trim(),
             CtaText = string.IsNullOrWhiteSpace(request.CtaText) ? null : request.CtaText.Trim(),
+            Tag = string.IsNullOrWhiteSpace(request.Tag) ? null : request.Tag.Trim(),
             SortOrder = request.SortOrder,
             IsActive = request.IsActive,
             StartsAt = request.StartsAt,

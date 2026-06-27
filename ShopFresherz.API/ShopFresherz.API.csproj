@@ -25,4 +25,9 @@
     <ProjectReference Include="..\ShopFresherz.Infrastructure\ShopFresherz.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="publish\**" />
+    <None Remove="publish\**" />
+  </ItemGroup>
+
 </Project>

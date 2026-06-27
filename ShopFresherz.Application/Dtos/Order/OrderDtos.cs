@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ShopFresherz.Domain.Enums;
 
 namespace ShopFresherz.Application.Dtos.Order;
@@ -126,8 +127,18 @@ public sealed class OrderDto
 /// <summary>Request payload for creating a new order from the active cart.</summary>
 public sealed class CreateOrderRequest
 {
+    /// <summary>Gets or sets direct checkout line items from the storefront payload.</summary>
+    public List<CreateOrderItemRequest> Items { get; set; } = new();
+
     /// <summary>Gets or sets the saved address ID to deliver to (mutually exclusive with InlineAddress).</summary>
     public Guid? AddressId { get; set; }
+
+    /// <summary>Gets or sets the saved address ID string from the storefront payload.</summary>
+    public string? ShippingAddressId
+    {
+        get => AddressId?.ToString();
+        set => AddressId = ParseNullableGuid(value, nameof(ShippingAddressId));
+    }
 
     /// <summary>Gets or sets an inline address (mutually exclusive with AddressId).</summary>
     public InlineAddressRequest? InlineAddress { get; set; }
@@ -135,11 +146,53 @@ public sealed class CreateOrderRequest
     /// <summary>Gets or sets the selected delivery method.</summary>
     public DeliveryMethod DeliveryMethod { get; set; }
 
+    /// <summary>Gets or sets the nested delivery object from the storefront payload.</summary>
+    public CreateOrderDeliveryRequest? Delivery
+    {
+        get => null;
+        set
+        {
+            if (value is not null)
+            {
+                DeliveryMethod = value.ToDeliveryMethod();
+            }
+        }
+    }
+
     /// <summary>Gets or sets the selected payment method.</summary>
     public PaymentMethod PaymentMethod { get; set; }
 
+    /// <summary>Gets or sets the nested payment object from the storefront payload.</summary>
+    public CreateOrderPaymentRequest? Payment
+    {
+        get => null;
+        set
+        {
+            if (value is not null)
+            {
+                PaymentMethod = value.ToPaymentMethod();
+            }
+        }
+    }
+
+    /// <summary>Gets or sets the nested pricing object from the storefront payload.</summary>
+    public CreateOrderPricingRequest? Pricing { get; set; }
+
     /// <summary>Gets or sets the coupon code to apply (optional).</summary>
     public string? CouponCode { get; set; }
+
+    /// <summary>Gets or sets the nested coupon object from the storefront payload.</summary>
+    public CreateOrderCouponRequest? Coupon
+    {
+        get => null;
+        set
+        {
+            if (value is not null)
+            {
+                CouponCode = value.Code;
+            }
+        }
+    }
 
     /// <summary>Gets or sets optional customer notes.</summary>
     public string? Notes { get; set; }
@@ -149,6 +202,106 @@ public sealed class CreateOrderRequest
 
     /// <summary>Gets or sets the guest session ID for guest checkout.</summary>
     public string? GuestSessionId { get; set; }
+
+    private static Guid? ParseNullableGuid(string? value, string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Guid.TryParse(value, out Guid parsed)
+            ? parsed
+            : throw new JsonException($"{propertyName} must be a valid GUID.");
+    }
+}
+
+/// <summary>Line item supplied by direct storefront checkout payloads.</summary>
+public sealed class CreateOrderItemRequest
+{
+    /// <summary>Gets or sets the product ID.</summary>
+    public Guid ProductId { get; set; }
+
+    /// <summary>Gets or sets the product name supplied by the storefront.</summary>
+    public string? Name { get; set; }
+
+    /// <summary>Gets or sets the requested quantity.</summary>
+    public int Quantity { get; set; }
+
+    /// <summary>Gets or sets the storefront unit price. Server-calculated prices are authoritative.</summary>
+    public decimal Price { get; set; }
+
+    /// <summary>Gets or sets the storefront image URL.</summary>
+    public string? Image { get; set; }
+}
+
+/// <summary>Nested delivery object supplied by the storefront checkout payload.</summary>
+public sealed class CreateOrderDeliveryRequest
+{
+    /// <summary>Gets or sets the frontend delivery method string.</summary>
+    public string Method { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the frontend delivery fee. Server-calculated fees are authoritative.</summary>
+    public decimal Fee { get; set; }
+
+    /// <summary>Converts the frontend delivery method to the domain enum.</summary>
+    public DeliveryMethod ToDeliveryMethod() => Method.Trim().ToLowerInvariant() switch
+    {
+        "standard" => DeliveryMethod.Standard,
+        "express"  => DeliveryMethod.Express,
+        "pickup"   => DeliveryMethod.Pickup,
+        _          => throw new JsonException("delivery.method must be standard, express, or pickup."),
+    };
+}
+
+/// <summary>Nested payment object supplied by the storefront checkout payload.</summary>
+public sealed class CreateOrderPaymentRequest
+{
+    /// <summary>Gets or sets the frontend payment method string.</summary>
+    public string Method { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets an optional saved card ID from the storefront payload.</summary>
+    public string? SavedCardId { get; set; }
+
+    /// <summary>Converts the frontend payment method to the domain enum.</summary>
+    public PaymentMethod ToPaymentMethod() => Method.Trim().ToLowerInvariant() switch
+    {
+        "card"            => PaymentMethod.Card,
+        "bank_transfer"   => PaymentMethod.BankTransfer,
+        "banktransfer"    => PaymentMethod.BankTransfer,
+        "pay_on_delivery" => PaymentMethod.PayOnDelivery,
+        "payondelivery"   => PaymentMethod.PayOnDelivery,
+        _                 => throw new JsonException("payment.method must be card, bank_transfer, or pay_on_delivery."),
+    };
+}
+
+/// <summary>Nested pricing object supplied by the storefront checkout payload.</summary>
+public sealed class CreateOrderPricingRequest
+{
+    /// <summary>Gets or sets the frontend subtotal.</summary>
+    public decimal Subtotal { get; set; }
+
+    /// <summary>Gets or sets the frontend discount amount.</summary>
+    public decimal DiscountAmount { get; set; }
+
+    /// <summary>Gets or sets the frontend delivery fee.</summary>
+    public decimal DeliveryFee { get; set; }
+
+    /// <summary>Gets or sets the frontend tax amount.</summary>
+    public decimal Tax { get; set; }
+
+    /// <summary>Gets or sets the frontend total.</summary>
+    public decimal Total { get; set; }
+}
+
+/// <summary>Nested coupon object supplied by the storefront checkout payload.</summary>
+public sealed class CreateOrderCouponRequest
+{
+    /// <summary>Gets or sets the coupon code.</summary>
+    public string? Code { get; set; }
+
+    /// <summary>Gets or sets the frontend discount amount. Server coupon calculation is authoritative.</summary>
+    public decimal DiscountAmount { get; set; }
 }
 
 /// <summary>Inline address for one-time checkout without saving to profile.</summary>
@@ -182,14 +335,27 @@ public sealed class CreateOrderResponse
     /// <summary>Gets or sets the order number.</summary>
     public string OrderNumber { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the Paystack authorisation URL to redirect the customer to.</summary>
+    /// <summary>Gets or sets the Flutterwave hosted checkout URL to redirect the customer to.</summary>
     public string? PaymentUrl { get; set; }
 
     /// <summary>Gets or sets the payment reference for subsequent verification.</summary>
     public string? PaymentReference { get; set; }
 
+    /// <summary>Gets or sets manual transfer instructions when bank transfer is selected.</summary>
+    public BankDetailsDto? BankDetails { get; set; }
+
     /// <summary>Gets or sets the order total.</summary>
     public decimal Total { get; set; }
+}
+
+/// <summary>Merchant account details returned for manual bank transfers.</summary>
+public sealed class BankDetailsDto
+{
+    public string BankName { get; set; } = string.Empty;
+    public string AccountNumber { get; set; } = string.Empty;
+    public string AccountName { get; set; } = string.Empty;
+    public string Instructions { get; set; } =
+        "Please make payment and send proof of payment via WhatsApp to complete your order.";
 }
 
 /// <summary>Request payload for updating order status (admin).</summary>

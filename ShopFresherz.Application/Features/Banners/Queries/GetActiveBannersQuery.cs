@@ -40,5 +40,6 @@ public sealed class GetActiveBannersQueryHandler
         banner.LinkUrl,
         banner.SubTitle,
         banner.CtaText,
+        banner.Tag,
         banner.SortOrder);
 }

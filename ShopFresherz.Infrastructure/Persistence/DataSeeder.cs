@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using ShopFresherz.Domain.Entities;
 using ShopFresherz.Domain.Enums;
 
@@ -17,34 +16,97 @@ public static class DataSeeder
         try { await SeedBannersAsync(context); } catch { }
         try { await SeedCouponsAsync(context); } catch { }
         try { await SeedReviewsAsync(context); } catch { }
+        try { await SeedPromotionalSectionsAsync(context); } catch { }
     }
+
+    // ── Categories ────────────────────────────────────────────────────────────
+
+    private static readonly List<Category> CategoriesToSeed = new()
+    {
+        new() { Id = 1,  Name = "Smartphones",          Slug = "smartphones",        ParentId = null, SortOrder = 1, IsActive = true },
+        new() { Id = 2,  Name = "Smartphones",          Slug = "phones",             ParentId = null, SortOrder = 1, IsActive = true },
+        new() { Id = 3,  Name = "Laptops & Computers",  Slug = "laptops",            ParentId = null, SortOrder = 2, IsActive = true },
+        new() { Id = 4,  Name = "Laptops",              Slug = "laptops-sub",        ParentId = 3,    SortOrder = 1, IsActive = true },
+        new() { Id = 5,  Name = "Smartwatches",         Slug = "smartwatches",       ParentId = null, SortOrder = 3, IsActive = true },
+        new() { Id = 6,  Name = "Accessories",          Slug = "accessories",        ParentId = null, SortOrder = 4, IsActive = true },
+        new() { Id = 7,  Name = "Gaming",               Slug = "gaming",             ParentId = null, SortOrder = 5, IsActive = true },
+        new() { Id = 8,  Name = "Audio",                Slug = "audio",              ParentId = null, SortOrder = 6, IsActive = true },
+        new() { Id = 9,  Name = "Computer Peripherals", Slug = "peripherals",        ParentId = null, SortOrder = 7, IsActive = true },
+        new() { Id = 11, Name = "Cables",               Slug = "cables",             ParentId = 6,    SortOrder = 1, IsActive = true },
+        new() { Id = 15, Name = "Gaming Accessories",   Slug = "gaming-accessories", ParentId = 7,    SortOrder = 1, IsActive = true },
+        new() { Id = 16, Name = "Chargers",             Slug = "chargers",           ParentId = 6,    SortOrder = 2, IsActive = true },
+        new() { Id = 17, Name = "Power Banks",          Slug = "power-banks",        ParentId = 6,    SortOrder = 3, IsActive = true },
+        new() { Id = 18, Name = "Earbuds & Headphones", Slug = "earbuds",            ParentId = 8,    SortOrder = 1, IsActive = true },
+
+        // Legacy storefront slugs kept for backward-compatible links and older seed lookups.
+        new() { Id = 101, Name = "New Arrivals",         Slug = "new-arrivals",          SortOrder = 101, IsActive = true },
+        new() { Id = 102, Name = "Mobile Phones",        Slug = "mobile-phones",         SortOrder = 102, IsActive = true },
+        new() { Id = 103, Name = "Tablets",              Slug = "tablets",               SortOrder = 103, IsActive = true },
+        new() { Id = 104, Name = "Laptops & Computers",  Slug = "laptops-computers",     SortOrder = 104, IsActive = true },
+        new() { Id = 105, Name = "Smart Watches",        Slug = "smart-watches",         SortOrder = 105, IsActive = true },
+        new() { Id = 106, Name = "Games & Consoles",     Slug = "games-consoles",        SortOrder = 106, IsActive = true },
+        new() { Id = 107, Name = "Electronics",          Slug = "electronics",           SortOrder = 107, IsActive = true },
+        new() { Id = 108, Name = "Computing Accessories",Slug = "computing-accessories", SortOrder = 108, IsActive = true },
+        new() { Id = 109, Name = "Home & Kitchen Tech",  Slug = "home-kitchen-tech",     SortOrder = 109, IsActive = true },
+        new() { Id = 110, Name = "Musical Equipment",    Slug = "musical-equipment",     SortOrder = 110, IsActive = true },
+        new() { Id = 111, Name = "Romoss",               Slug = "romoss",                SortOrder = 111, IsActive = true },
+        new() { Id = 112, Name = "Computer Mouse",       Slug = "computer-mouse",        SortOrder = 112, IsActive = true },
+        new() { Id = 113, Name = "Other Categories",     Slug = "other-categories",      SortOrder = 113, IsActive = true },
+    };
 
     private static async Task SeedCategoriesAsync(ShopFresherzDbContext context)
     {
-        if (await context.Categories.AnyAsync()) return;
+        HashSet<string> existing = (await context.Categories
+            .Select(c => c.Slug)
+            .ToListAsync()).ToHashSet();
 
-        List<Category> categories = new()
+        HashSet<int> existingIds = (await context.Categories
+            .Select(c => c.Id)
+            .ToListAsync()).ToHashSet();
+
+        List<Category> missing = CategoriesToSeed
+            .Where(c => !existing.Contains(c.Slug))
+            .ToList();
+
+        if (missing.Count == 0) return;
+
+        List<Category> withExplicitIds = missing
+            .Where(c => c.Id > 0 && !existingIds.Contains(c.Id))
+            .ToList();
+
+        List<Category> withoutExplicitIds = missing
+            .Except(withExplicitIds)
+            .Select(c => new Category
+            {
+                Name = c.Name,
+                Slug = c.Slug,
+                ParentId = c.ParentId.HasValue && existingIds.Contains(c.ParentId.Value) ? c.ParentId : null,
+                SortOrder = c.SortOrder,
+                IsActive = c.IsActive,
+                ImageUrl = c.ImageUrl,
+                MetaTitle = c.MetaTitle,
+                MetaDescription = c.MetaDescription,
+            })
+            .ToList();
+
+        if (withExplicitIds.Count > 0)
         {
-            new() { Name="New Arrivals",         Slug="new-arrivals",          SortOrder=1,  IsActive=true },
-            new() { Name="Mobile Phones",         Slug="mobile-phones",         SortOrder=2,  IsActive=true },
-            new() { Name="Tablets",               Slug="tablets",               SortOrder=3,  IsActive=true },
-            new() { Name="Laptops & Computers",   Slug="laptops-computers",     SortOrder=4,  IsActive=true },
-            new() { Name="Smart Watches",         Slug="smart-watches",         SortOrder=5,  IsActive=true },
-            new() { Name="Accessories",           Slug="accessories",           SortOrder=6,  IsActive=true },
-            new() { Name="Games & Consoles",      Slug="games-consoles",        SortOrder=7,  IsActive=true },
-            new() { Name="Electronics",           Slug="electronics",           SortOrder=8,  IsActive=true },
-            new() { Name="Computing Accessories", Slug="computing-accessories", SortOrder=9,  IsActive=true },
-            new() { Name="Home & Kitchen Tech",   Slug="home-kitchen-tech",     SortOrder=10, IsActive=true },
-            new() { Name="Cables",                Slug="cables",                SortOrder=11, IsActive=true },
-            new() { Name="Musical Equipment",     Slug="musical-equipment",     SortOrder=12, IsActive=true },
-            new() { Name="Romoss",                Slug="romoss",                SortOrder=13, IsActive=true },
-            new() { Name="Computer Mouse",        Slug="computer-mouse",        SortOrder=14, IsActive=true },
-            new() { Name="Other Categories",      Slug="other-categories",      SortOrder=15, IsActive=true },
-        };
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Categories ON");
+            await context.Categories.AddRangeAsync(withExplicitIds);
+            await context.SaveChangesAsync();
+            await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Categories OFF");
+            await transaction.CommitAsync();
+        }
 
-        await context.Categories.AddRangeAsync(categories);
-        await context.SaveChangesAsync();
+        if (withoutExplicitIds.Count > 0)
+        {
+            await context.Categories.AddRangeAsync(withoutExplicitIds);
+            await context.SaveChangesAsync();
+        }
     }
+
+    // ── Admin user ────────────────────────────────────────────────────────────
 
     private static async Task SeedAdminUserAsync(ShopFresherzDbContext context)
     {
@@ -67,560 +129,1081 @@ public static class DataSeeder
         await context.SaveChangesAsync();
     }
 
+    // ── Brands ────────────────────────────────────────────────────────────────
+
+    private static readonly List<Brand> BrandsToSeed = new()
+    {
+        new() { Id = new("5C9C601D-9FE5-4718-B47C-ABB836C04A53"), Name = "Apple",        Slug = "apple",        IsActive = true },
+        new() { Id = new("CF66C378-DE44-42F9-A9F4-F73D014698C1"), Name = "Samsung",      Slug = "samsung",      IsActive = true },
+        new() { Id = new("8BCA4BB9-1C01-4E5C-9B19-745294994627"), Name = "Tecno",        Slug = "tecno",        IsActive = true },
+        new() { Id = new("81E9A3B8-2DE4-46DA-9EBF-99D968769ACE"), Name = "Infinix",      Slug = "infinix",      IsActive = true },
+        new() { Name = "HP",           Slug = "hp",           IsActive = true },
+        new() { Name = "Dell",         Slug = "dell",         IsActive = true },
+        new() { Id = new("FF3005B0-337B-4C8D-B08C-68BD558FBDBF"), Name = "Sony",         Slug = "sony",         IsActive = true },
+        new() { Id = new("5FA3BB47-91D3-4635-9F2C-986C709AB99A"), Name = "JBL",          Slug = "jbl",          IsActive = true },
+        new() { Name = "Romoss",       Slug = "romoss",       IsActive = true },
+        new() { Name = "Logitech",     Slug = "logitech",     IsActive = true },
+        new() { Id = new("D6F19BCB-D59F-4694-9CB2-3773F0DAD156"), Name = "Xiaomi",       Slug = "xiaomi",       IsActive = true },
+        new() { Id = new("637267AA-C77B-450D-AC55-BC2143FED949"), Name = "Anker",        Slug = "anker",        IsActive = true },
+        new() { Id = new("8BA95021-0275-4FEC-B32F-6CB1649BF624"), Name = "Oraimo",       Slug = "oraimo",       IsActive = true },
+        new() { Id = new("AFE952D2-E420-46F6-9C68-2C22AFBFC627"), Name = "Microsoft",    Slug = "microsoft",    IsActive = true },
+        new() { Id = new("BCE18E32-CD7D-493B-8D84-7E984BA60D43"), Name = "Nintendo",     Slug = "nintendo",     IsActive = true },
+        new() { Id = new("0E0545DA-55F3-4AC6-A9EB-884E6474AB76"), Name = "Razer",        Slug = "razer",        IsActive = true },
+        new() { Id = new("8EF4C97F-B1E1-408D-981D-439EFD576076"), Name = "Redragon",     Slug = "redragon",     IsActive = true },
+        new() { Id = new("5EB42993-9AA4-40D8-9BEA-D69522772E88"), Name = "HyperX",       Slug = "hyperx",       IsActive = true },
+        new() { Id = new("85D7B77D-5483-4CDB-B962-899D19F00F2C"), Name = "Spigen",       Slug = "spigen",       IsActive = true },
+        new() { Id = new("BEC93700-9990-4296-8E6D-C329C4AC870B"), Name = "Neewer",       Slug = "neewer",       IsActive = true },
+        new() { Id = new("7D2F9979-8BC4-41C4-B847-1FF3130B6230"), Name = "UGREEN",       Slug = "ugreen",       IsActive = true },
+        new() { Id = new("4B86C0FD-BD02-463D-9F1F-D47982528AA3"), Name = "Cooler Master",Slug = "cooler-master",IsActive = true },
+        new() { Id = new("D0EF5DF2-B0AA-4984-8227-47C4E3D3214F"), Name = "GTRacing",     Slug = "gtracing",     IsActive = true },
+    };
+
     private static async Task SeedBrandsAsync(ShopFresherzDbContext context)
     {
-        if (await context.Brands.AnyAsync()) return;
+        HashSet<string> existing = (await context.Brands
+            .Select(b => b.Slug)
+            .ToListAsync()).ToHashSet();
 
-        List<Brand> brands = new()
-        {
-            new() { Name = "Apple",    Slug = "apple",    IsActive = true },
-            new() { Name = "Samsung",  Slug = "samsung",  IsActive = true },
-            new() { Name = "Tecno",    Slug = "tecno",    IsActive = true },
-            new() { Name = "Infinix",  Slug = "infinix",  IsActive = true },
-            new() { Name = "HP",       Slug = "hp",       IsActive = true },
-            new() { Name = "Dell",     Slug = "dell",     IsActive = true },
-            new() { Name = "Sony",     Slug = "sony",     IsActive = true },
-            new() { Name = "JBL",      Slug = "jbl",      IsActive = true },
-            new() { Name = "Romoss",   Slug = "romoss",   IsActive = true },
-            new() { Name = "Logitech", Slug = "logitech", IsActive = true },
-        };
+        List<Brand> missing = BrandsToSeed
+            .Where(b => !existing.Contains(b.Slug))
+            .ToList();
 
-        await context.Brands.AddRangeAsync(brands);
+        if (missing.Count == 0) return;
+
+        await context.Brands.AddRangeAsync(missing);
         await context.SaveChangesAsync();
     }
+
+    // ── Products ──────────────────────────────────────────────────────────────
 
     private static async Task SeedProductsAsync(ShopFresherzDbContext context)
     {
-        if (await context.Products.CountAsync() >= 5) return;
-
+        // ── Load lookup dictionaries ─────────────────────────────────────────
         Dictionary<string, Guid> brandIds = await context.Brands
             .ToDictionaryAsync(b => b.Slug, b => b.Id);
-
         Dictionary<string, int> categoryIds = await context.Categories
             .ToDictionaryAsync(c => c.Slug, c => c.Id);
 
+        Guid apple    = brandIds["apple"];
+        Guid samsung  = brandIds["samsung"];
+        Guid tecno    = brandIds["tecno"];
+        Guid infinix  = brandIds["infinix"];
+        Guid sony     = brandIds["sony"];
+        Guid jbl      = brandIds["jbl"];
+        Guid xiaomi   = brandIds["xiaomi"];
+        Guid anker    = brandIds["anker"];
+        Guid oraimo   = brandIds["oraimo"];
+        Guid microsoft = brandIds["microsoft"];
+        Guid nintendo = brandIds["nintendo"];
+        Guid razer    = brandIds["razer"];
+        Guid redragon = brandIds["redragon"];
+        Guid hyperx   = brandIds["hyperx"];
+        Guid spigen   = brandIds["spigen"];
+        Guid neewer   = brandIds["neewer"];
+        Guid ugreen   = brandIds["ugreen"];
+        Guid coolerMaster = brandIds["cooler-master"];
+        Guid gtracing = brandIds["gtracing"];
+        Guid logitech = brandIds["logitech"];
+
+        int phones      = categoryIds.ContainsKey("phones") ? categoryIds["phones"] : categoryIds["mobile-phones"];
+        int laptops     = categoryIds.ContainsKey("laptops-sub") ? categoryIds["laptops-sub"] : categoryIds["laptops-computers"];
+        int consoles    = categoryIds.ContainsKey("gaming") ? categoryIds["gaming"] : categoryIds["games-consoles"];
+        int accessories = categoryIds["accessories"];
+        int smartWatches = categoryIds.ContainsKey("smartwatches") ? categoryIds["smartwatches"] : categoryIds["smart-watches"];
+        int cables      = categoryIds["cables"];
+        int compAcc     = categoryIds.ContainsKey("peripherals") ? categoryIds["peripherals"] : categoryIds["computing-accessories"];
+        int gamingAcc   = categoryIds.ContainsKey("gaming-accessories") ? categoryIds["gaming-accessories"] : consoles;
+        int chargers    = categoryIds["chargers"];
+        int powerBanks  = categoryIds["power-banks"];
+        int audio       = categoryIds.ContainsKey("earbuds") ? categoryIds["earbuds"] : categoryIds["audio"];
+        int otherCats   = categoryIds["other-categories"];
+
         List<Product> products = new()
         {
-            // MOBILE PHONES
+            // ════════════════════════════════════════════════════════════════
+            // SMARTPHONES
+            // ════════════════════════════════════════════════════════════════
+
             new Product
             {
-                SKU = "IP16PM-256-BLK",
+                Id = new Guid("11111111-1001-0000-0000-000000000001"),
+                SKU = "IP16PMAX-256",
                 Name = "Apple iPhone 16 Pro Max 256GB",
                 Slug = "apple-iphone-16-pro-max-256gb",
-                BrandId = brandIds["apple"],
-                CategoryId = categoryIds["mobile-phones"],
-                Description = "The most powerful iPhone ever. A18 Pro chip, 48MP camera system, titanium design.",
-                ShortDescription = "A18 Pro chip, 48MP camera, titanium build",
-                Price = 1850000,
-                CompareAtPrice = 1999000,
-                StockQty = 25,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.8m,
-                ReviewCount = 124,
-                SoldCount = 89,
-                MetaTitle = "Apple iPhone 16 Pro Max 256GB - ShopFresherz",
-                MetaDescription = "Buy iPhone 16 Pro Max in Nigeria. A18 Pro chip, 48MP ProRAW camera.",
+                BrandId = apple, CategoryId = phones,
+                Description = "The most powerful iPhone ever. A18 Pro chip delivers console-level gaming and groundbreaking camera capabilities. Titanium design, 48MP Fusion camera system, and 4K 120fps ProRes video.",
+                ShortDescription = "A18 Pro · 48MP · Titanium · 5G",
+                Price = 1850000, CompareAtPrice = 2050000,
+                StockQty = 15, IsActive = true, IsFeatured = true,
+                AverageRating = 4.9m, ReviewCount = 148, SoldCount = 93,
                 WeightKg = 0.227m,
-                AttributesJson = "{\"display\":\"6.9 inch Super Retina XDR\",\"ram\":\"8GB\",\"storage\":\"256GB\",\"battery\":\"4685mAh\",\"network\":\"5G\",\"os\":\"iOS 18\",\"color\":\"Black Titanium\"}"
+                AttributesJson = "{\"display\":\"6.9\\\" Super Retina XDR\",\"chip\":\"A18 Pro\",\"ram\":\"8GB\",\"storage\":\"256GB\",\"camera\":\"48MP main + 48MP ultrawide + 12MP telephoto\",\"battery\":\"4685mAh\",\"network\":\"5G\",\"os\":\"iOS 18\",\"color\":\"Black Titanium\"}"
             },
+
             new Product
             {
-                SKU = "SGS25U-512-TIT",
+                Id = new Guid("11111111-1002-0000-0000-000000000001"),
+                SKU = "IP16PRO-256",
+                Name = "Apple iPhone 16 Pro 256GB",
+                Slug = "apple-iphone-16-pro-256gb",
+                BrandId = apple, CategoryId = phones,
+                Description = "A18 Pro chip, all-new 48MP Fusion camera, and the innovative Camera Control button. 6.3-inch Super Retina XDR display with ProMotion. Titanium design.",
+                ShortDescription = "A18 Pro · 48MP · 6.3\\\" OLED · Titanium",
+                Price = 1550000, CompareAtPrice = 1750000,
+                StockQty = 18, IsActive = true, IsFeatured = true,
+                AverageRating = 4.8m, ReviewCount = 112, SoldCount = 74,
+                WeightKg = 0.199m,
+                AttributesJson = "{\"display\":\"6.3\\\" Super Retina XDR\",\"chip\":\"A18 Pro\",\"storage\":\"256GB\",\"camera\":\"48MP system\",\"battery\":\"3582mAh\",\"network\":\"5G\",\"os\":\"iOS 18\",\"color\":\"Desert Titanium\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1003-0000-0000-000000000001"),
+                SKU = "IP15PMAX-256",
+                Name = "Apple iPhone 15 Pro Max 256GB",
+                Slug = "apple-iphone-15-pro-max-256gb",
+                BrandId = apple, CategoryId = phones,
+                Description = "A17 Pro chip with hardware ray tracing. 5x optical zoom on a 12MP telephoto camera. Titanium frame. USB 3 speeds on USB-C. Dynamic Island.",
+                ShortDescription = "A17 Pro · 5x Zoom · Titanium · USB-C",
+                Price = 1350000, CompareAtPrice = 1550000,
+                StockQty = 12, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 89, SoldCount = 61,
+                WeightKg = 0.221m,
+                AttributesJson = "{\"display\":\"6.7\\\" Super Retina XDR ProMotion\",\"chip\":\"A17 Pro\",\"storage\":\"256GB\",\"camera\":\"48MP + 12MP 5x zoom\",\"battery\":\"4422mAh\",\"network\":\"5G\",\"os\":\"iOS 17\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1004-0000-0000-000000000001"),
+                SKU = "IP15-128",
+                Name = "Apple iPhone 15 128GB",
+                Slug = "apple-iphone-15-128gb",
+                BrandId = apple, CategoryId = phones,
+                Description = "A16 Bionic chip. USB-C connector. Dynamic Island. 48MP main camera with 2x optical quality telephoto. Durable colour-infused glass back.",
+                ShortDescription = "A16 Bionic · Dynamic Island · USB-C",
+                Price = 850000, CompareAtPrice = 980000,
+                StockQty = 20, IsActive = true, IsFeatured = false,
+                AverageRating = 4.6m, ReviewCount = 76, SoldCount = 88,
+                WeightKg = 0.171m,
+                AttributesJson = "{\"display\":\"6.1\\\" Super Retina XDR\",\"chip\":\"A16 Bionic\",\"storage\":\"128GB\",\"camera\":\"48MP main\",\"battery\":\"3349mAh\",\"network\":\"5G\",\"os\":\"iOS 17\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1005-0000-0000-000000000001"),
+                SKU = "IP14PRO-256",
+                Name = "Apple iPhone 14 Pro 256GB",
+                Slug = "apple-iphone-14-pro-256gb",
+                BrandId = apple, CategoryId = phones,
+                Description = "A16 Bionic chip. Dynamic Island replaces the notch. Always-On display. 48MP Pro camera system. Emergency SOS via satellite.",
+                ShortDescription = "A16 Bionic · Dynamic Island · 48MP",
+                Price = 950000, CompareAtPrice = 1100000,
+                StockQty = 10, IsActive = true, IsFeatured = false,
+                AverageRating = 4.6m, ReviewCount = 64, SoldCount = 52,
+                WeightKg = 0.206m,
+                AttributesJson = "{\"display\":\"6.1\\\" Super Retina XDR ProMotion\",\"chip\":\"A16 Bionic\",\"storage\":\"256GB\",\"camera\":\"48MP Pro system\",\"battery\":\"3200mAh\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1006-0000-0000-000000000001"),
+                SKU = "SGS25U-512",
                 Name = "Samsung Galaxy S25 Ultra 512GB",
                 Slug = "samsung-galaxy-s25-ultra-512gb",
-                BrandId = brandIds["samsung"],
-                CategoryId = categoryIds["mobile-phones"],
-                Description = "Galaxy AI on the most powerful Galaxy ever. Snapdragon 8 Elite, built-in S Pen.",
-                ShortDescription = "Snapdragon 8 Elite, S Pen, 200MP camera",
-                Price = 1650000,
-                CompareAtPrice = 1800000,
-                StockQty = 18,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.7m,
-                ReviewCount = 98,
-                SoldCount = 67,
-                MetaTitle = "Samsung Galaxy S25 Ultra 512GB - ShopFresherz",
-                MetaDescription = "Buy Samsung Galaxy S25 Ultra in Nigeria.",
+                BrandId = samsung, CategoryId = phones,
+                Description = "Snapdragon 8 Elite for Galaxy. Built-in S Pen. 200MP ProVisual Engine camera. Galaxy AI on-device intelligence. 12GB RAM, 5000mAh battery.",
+                ShortDescription = "Snapdragon 8 Elite · 200MP · S Pen",
+                Price = 1650000, CompareAtPrice = 1850000,
+                StockQty = 14, IsActive = true, IsFeatured = true,
+                AverageRating = 4.8m, ReviewCount = 103, SoldCount = 71,
                 WeightKg = 0.218m,
-                AttributesJson = "{\"display\":\"6.9 inch QHD+ Dynamic AMOLED\",\"ram\":\"12GB\",\"storage\":\"512GB\",\"battery\":\"5000mAh\",\"network\":\"5G\",\"os\":\"Android 15\",\"color\":\"Titanium Silver\"}"
-            },
-            new Product
-            {
-                SKU = "TECNO-CAM20-128",
-                Name = "Tecno Camon 20 Pro 128GB",
-                Slug = "tecno-camon-20-pro-128gb",
-                BrandId = brandIds["tecno"],
-                CategoryId = categoryIds["mobile-phones"],
-                Description = "Professional photography smartphone with 50MP RGBW camera and 6.67 inch AMOLED display.",
-                ShortDescription = "50MP RGBW camera, AMOLED display",
-                Price = 189000,
-                CompareAtPrice = 220000,
-                StockQty = 45,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.2m,
-                ReviewCount = 67,
-                SoldCount = 134,
-                MetaTitle = "Tecno Camon 20 Pro 128GB - ShopFresherz",
-                MetaDescription = "Buy Tecno Camon 20 Pro in Nigeria at best price.",
-                WeightKg = 0.192m,
-                AttributesJson = "{\"display\":\"6.67 inch AMOLED\",\"ram\":\"8GB\",\"storage\":\"128GB\",\"battery\":\"5000mAh\",\"network\":\"4G\",\"os\":\"Android 13\",\"color\":\"Serenity Blue\"}"
+                AttributesJson = "{\"display\":\"6.9\\\" QHD+ Dynamic AMOLED\",\"chip\":\"Snapdragon 8 Elite\",\"ram\":\"12GB\",\"storage\":\"512GB\",\"camera\":\"200MP main\",\"battery\":\"5000mAh 45W\",\"network\":\"5G\"}"
             },
 
-            // LAPTOPS & COMPUTERS
             new Product
             {
-                SKU = "MBA-M3-16-512",
-                Name = "Apple MacBook Air 15 M3 16GB 512GB",
-                Slug = "apple-macbook-air-15-m3-16gb-512gb",
-                BrandId = brandIds["apple"],
-                CategoryId = categoryIds["laptops-computers"],
-                Description = "Supercharged by M3 chip. Up to 18 hours battery, 15.3 inch Liquid Retina display.",
-                ShortDescription = "M3 chip, 18hr battery, 15.3 inch Retina",
-                Price = 2100000,
-                CompareAtPrice = 2299000,
-                StockQty = 12,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.9m,
-                ReviewCount = 45,
-                SoldCount = 28,
-                MetaTitle = "Apple MacBook Air 15 M3 - ShopFresherz",
-                MetaDescription = "Buy MacBook Air M3 in Nigeria. Best price guaranteed.",
+                Id = new Guid("11111111-1007-0000-0000-000000000001"),
+                SKU = "SGS24FE-128",
+                Name = "Samsung Galaxy S24 FE 128GB",
+                Slug = "samsung-galaxy-s24-fe-128gb",
+                BrandId = samsung, CategoryId = phones,
+                Description = "Exynos 2500, 6.7-inch FHD+ 120Hz AMOLED, 50MP OIS camera, 4700mAh battery with 25W charging. Galaxy AI features included.",
+                ShortDescription = "Exynos 2500 · 50MP · 120Hz AMOLED",
+                Price = 480000, CompareAtPrice = 540000,
+                StockQty = 25, IsActive = true, IsFeatured = false,
+                AverageRating = 4.4m, ReviewCount = 58, SoldCount = 67,
+                WeightKg = 0.213m,
+                AttributesJson = "{\"display\":\"6.7\\\" FHD+ 120Hz AMOLED\",\"chip\":\"Exynos 2500\",\"ram\":\"8GB\",\"storage\":\"128GB\",\"camera\":\"50MP OIS\",\"battery\":\"4700mAh 25W\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1008-0000-0000-000000000001"),
+                SKU = "SGA56-128",
+                Name = "Samsung Galaxy A56 5G 128GB",
+                Slug = "samsung-galaxy-a56-5g-128gb",
+                BrandId = samsung, CategoryId = phones,
+                Description = "Exynos 1580, 6.7-inch FHD+ 120Hz Super AMOLED, 50MP triple camera, 5000mAh battery. Gorilla Glass Victus+ protection.",
+                ShortDescription = "6.7\\\" AMOLED · 50MP · 5000mAh",
+                Price = 380000, CompareAtPrice = 430000,
+                StockQty = 30, IsActive = true, IsFeatured = false,
+                AverageRating = 4.3m, ReviewCount = 44, SoldCount = 56,
+                WeightKg = 0.198m,
+                AttributesJson = "{\"display\":\"6.7\\\" FHD+ 120Hz Super AMOLED\",\"chip\":\"Exynos 1580\",\"ram\":\"8GB\",\"storage\":\"128GB\",\"camera\":\"50MP + 12MP + 5MP\",\"battery\":\"5000mAh\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1009-0000-0000-000000000001"),
+                SKU = "SGA36-128",
+                Name = "Samsung Galaxy A36 5G 128GB",
+                Slug = "samsung-galaxy-a36-5g-128gb",
+                BrandId = samsung, CategoryId = phones,
+                Description = "Snapdragon 6 Gen 3, 6.66-inch FHD+ 120Hz Super AMOLED, 50MP camera, 5000mAh with 45W fast charging.",
+                ShortDescription = "Snapdragon 6 Gen 3 · 50MP · 45W charging",
+                Price = 280000, CompareAtPrice = 320000,
+                StockQty = 35, IsActive = true, IsFeatured = false,
+                AverageRating = 4.2m, ReviewCount = 37, SoldCount = 48,
+                WeightKg = 0.193m,
+                AttributesJson = "{\"display\":\"6.66\\\" FHD+ 120Hz Super AMOLED\",\"chip\":\"Snapdragon 6 Gen 3\",\"ram\":\"8GB\",\"storage\":\"128GB\",\"camera\":\"50MP\",\"battery\":\"5000mAh 45W\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1010-0000-0000-000000000001"),
+                SKU = "SGZFLIP6-256",
+                Name = "Samsung Galaxy Z Flip6 256GB",
+                Slug = "samsung-galaxy-z-flip6-256gb",
+                BrandId = samsung, CategoryId = phones,
+                Description = "Snapdragon 8 Gen 3. Foldable design with 3.4-inch cover screen. Galaxy AI features. 50MP camera. 4000mAh battery.",
+                ShortDescription = "Foldable · 3.4\\\" Cover Screen · Snapdragon 8 Gen 3",
+                Price = 1100000, CompareAtPrice = 1250000,
+                StockQty = 8, IsActive = true, IsFeatured = true,
+                AverageRating = 4.5m, ReviewCount = 42, SoldCount = 29,
+                WeightKg = 0.187m,
+                AttributesJson = "{\"form_factor\":\"Foldable\",\"cover_display\":\"3.4\\\" Super AMOLED\",\"main_display\":\"6.7\\\" FHD+ 120Hz\",\"chip\":\"Snapdragon 8 Gen 3\",\"storage\":\"256GB\",\"camera\":\"50MP\",\"battery\":\"4000mAh\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1011-0000-0000-000000000001"),
+                SKU = "RN13PP-256",
+                Name = "Xiaomi Redmi Note 13 Pro+ 5G 256GB",
+                Slug = "xiaomi-redmi-note-13-pro-plus-5g-256gb",
+                BrandId = xiaomi, CategoryId = phones,
+                Description = "Dimensity 7200 Ultra, 200MP OIS camera, 6.67-inch 1.5K CurvedAMOLED, 120W HyperCharge. IP68 rated.",
+                ShortDescription = "200MP · 120W HyperCharge · IP68",
+                Price = 260000, CompareAtPrice = 300000,
+                StockQty = 28, IsActive = true, IsFeatured = false,
+                AverageRating = 4.4m, ReviewCount = 72, SoldCount = 84,
+                WeightKg = 0.204m,
+                AttributesJson = "{\"display\":\"6.67\\\" 1.5K CurvedAMOLED 120Hz\",\"chip\":\"Dimensity 7200 Ultra\",\"ram\":\"8GB\",\"storage\":\"256GB\",\"camera\":\"200MP OIS\",\"battery\":\"5000mAh 120W\",\"network\":\"5G\",\"ip\":\"IP68\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1012-0000-0000-000000000001"),
+                SKU = "RN13-128",
+                Name = "Xiaomi Redmi Note 13 5G 128GB",
+                Slug = "xiaomi-redmi-note-13-5g-128gb",
+                BrandId = xiaomi, CategoryId = phones,
+                Description = "Snapdragon 695 5G, 108MP camera, 6.67-inch 120Hz AMOLED display, 5000mAh battery with 33W fast charging.",
+                ShortDescription = "108MP · 120Hz AMOLED · 5G",
+                Price = 185000, CompareAtPrice = 215000,
+                StockQty = 40, IsActive = true, IsFeatured = false,
+                AverageRating = 4.2m, ReviewCount = 55, SoldCount = 97,
+                WeightKg = 0.188m,
+                AttributesJson = "{\"display\":\"6.67\\\" 120Hz AMOLED\",\"chip\":\"Snapdragon 695 5G\",\"ram\":\"6GB\",\"storage\":\"128GB\",\"camera\":\"108MP\",\"battery\":\"5000mAh 33W\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1013-0000-0000-000000000001"),
+                SKU = "INX-GT20P-256",
+                Name = "Infinix GT 20 Pro 256GB",
+                Slug = "infinix-gt-20-pro-256gb",
+                BrandId = infinix, CategoryId = phones,
+                Description = "Dimensity 8200 Ultimate gaming chip. 144Hz AMOLED display. RGB CORTEX-X lighting system. 45W fast charging. Dedicated gaming triggers.",
+                ShortDescription = "144Hz AMOLED · Dimensity 8200 · RGB",
+                Price = 235000, CompareAtPrice = 270000,
+                StockQty = 22, IsActive = true, IsFeatured = true,
+                AverageRating = 4.3m, ReviewCount = 31, SoldCount = 43,
+                WeightKg = 0.215m,
+                AttributesJson = "{\"display\":\"6.78\\\" 144Hz AMOLED\",\"chip\":\"Dimensity 8200 Ultimate\",\"ram\":\"12GB\",\"storage\":\"256GB\",\"camera\":\"108MP\",\"battery\":\"5000mAh 45W\",\"network\":\"5G\",\"special\":\"RGB lighting + gaming triggers\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1014-0000-0000-000000000001"),
+                SKU = "INX-GT10P-256",
+                Name = "Infinix GT 10 Pro 256GB",
+                Slug = "infinix-gt-10-pro-256gb",
+                BrandId = infinix, CategoryId = phones,
+                Description = "Dimensity 8050, 6.67-inch 144Hz AMOLED display, RGB CORTEX-X lighting, 108MP camera, 4600mAh battery 45W.",
+                ShortDescription = "144Hz AMOLED · Dimensity 8050 · RGB",
+                Price = 185000, CompareAtPrice = 210000,
+                StockQty = 25, IsActive = true, IsFeatured = false,
+                AverageRating = 4.1m, ReviewCount = 28, SoldCount = 39,
+                WeightKg = 0.210m,
+                AttributesJson = "{\"display\":\"6.67\\\" 144Hz AMOLED\",\"chip\":\"Dimensity 8050\",\"ram\":\"8GB\",\"storage\":\"256GB\",\"camera\":\"108MP\",\"battery\":\"4600mAh 45W\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1015-0000-0000-000000000001"),
+                SKU = "TECNO-C30P-256",
+                Name = "Tecno Camon 30 Pro 5G 256GB",
+                Slug = "tecno-camon-30-pro-5g-256gb",
+                BrandId = tecno, CategoryId = phones,
+                Description = "Dimensity 7020, 6.77-inch curved AMOLED 144Hz, 50MP rear camera with OIS, 5000mAh 45W fast charging. Stylish design.",
+                ShortDescription = "50MP OIS · 144Hz · 5G",
+                Price = 195000, CompareAtPrice = 230000,
+                StockQty = 30, IsActive = true, IsFeatured = false,
+                AverageRating = 4.2m, ReviewCount = 39, SoldCount = 52,
+                WeightKg = 0.195m,
+                AttributesJson = "{\"display\":\"6.77\\\" 144Hz curved AMOLED\",\"chip\":\"Dimensity 7020\",\"ram\":\"8GB\",\"storage\":\"256GB\",\"camera\":\"50MP OIS\",\"battery\":\"5000mAh 45W\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1016-0000-0000-000000000001"),
+                SKU = "TECNO-PV6P-256",
+                Name = "Tecno Pova 6 Pro 5G 256GB",
+                Slug = "tecno-pova-6-pro-5g-256gb",
+                BrandId = tecno, CategoryId = phones,
+                Description = "Dimensity 6080, 6.78-inch FHD+ 120Hz IPS, 50MP camera, 6000mAh battery with 45W fast charging. Gaming-tuned design.",
+                ShortDescription = "6000mAh · 45W · 5G · 120Hz",
+                Price = 145000, CompareAtPrice = 175000,
+                StockQty = 40, IsActive = true, IsFeatured = false,
+                AverageRating = 4.0m, ReviewCount = 33, SoldCount = 61,
+                WeightKg = 0.217m,
+                AttributesJson = "{\"display\":\"6.78\\\" 120Hz IPS\",\"chip\":\"Dimensity 6080\",\"ram\":\"8GB\",\"storage\":\"256GB\",\"camera\":\"50MP\",\"battery\":\"6000mAh 45W\",\"network\":\"5G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1017-0000-0000-000000000001"),
+                SKU = "REDMI-A3-64",
+                Name = "Xiaomi Redmi A3 64GB",
+                Slug = "xiaomi-redmi-a3-64gb",
+                BrandId = xiaomi, CategoryId = phones,
+                Description = "MediaTek Helio G36, 6.71-inch HD+ 90Hz display, 8MP camera, 5000mAh battery with 10W charging. Reliable everyday phone.",
+                ShortDescription = "Helio G36 · 90Hz · 5000mAh",
+                Price = 95000, CompareAtPrice = 115000,
+                StockQty = 50, IsActive = true, IsFeatured = false,
+                AverageRating = 3.9m, ReviewCount = 47, SoldCount = 112,
+                WeightKg = 0.193m,
+                AttributesJson = "{\"display\":\"6.71\\\" HD+ 90Hz IPS\",\"chip\":\"MediaTek Helio G36\",\"ram\":\"3GB\",\"storage\":\"64GB\",\"camera\":\"8MP\",\"battery\":\"5000mAh 10W\",\"network\":\"4G\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("11111111-1018-0000-0000-000000000001"),
+                SKU = "INX-NOTE40P-256",
+                Name = "Infinix Note 40 Pro+ 5G 256GB",
+                Slug = "infinix-note-40-pro-plus-5g-256gb",
+                BrandId = infinix, CategoryId = phones,
+                Description = "Dimensity 6080 5G, 6.78-inch AMOLED 120Hz, 108MP OIS camera, 4600mAh with 100W wired + 20W wireless charging.",
+                ShortDescription = "108MP OIS · 100W Charge · Wireless",
+                Price = 210000, CompareAtPrice = 245000,
+                StockQty = 25, IsActive = true, IsFeatured = false,
+                AverageRating = 4.2m, ReviewCount = 26, SoldCount = 37,
+                WeightKg = 0.207m,
+                AttributesJson = "{\"display\":\"6.78\\\" 120Hz AMOLED\",\"chip\":\"Dimensity 6080\",\"ram\":\"8GB\",\"storage\":\"256GB\",\"camera\":\"108MP OIS\",\"battery\":\"4600mAh 100W wired + 20W wireless\",\"network\":\"5G\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // LAPTOPS
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("22222222-2001-0000-0000-000000000001"),
+                SKU = "MBA-M4-13-16-256",
+                Name = "Apple MacBook Air M4 13-inch 16GB 256GB",
+                Slug = "apple-macbook-air-m4-13-inch-16gb-256gb",
+                BrandId = apple, CategoryId = laptops,
+                Description = "Apple M4 chip with 10-core CPU and 10-core GPU. 13.6-inch Liquid Retina display. Up to 18 hours battery. MagSafe charging. Two Thunderbolt 4 ports.",
+                ShortDescription = "M4 chip · 18hr battery · 13.6\\\" Retina",
+                Price = 1750000, CompareAtPrice = 1950000,
+                StockQty = 8, IsActive = true, IsFeatured = true,
+                AverageRating = 4.9m, ReviewCount = 57, SoldCount = 34,
+                WeightKg = 1.24m,
+                AttributesJson = "{\"display\":\"13.6\\\" Liquid Retina\",\"chip\":\"Apple M4\",\"ram\":\"16GB\",\"storage\":\"256GB SSD\",\"battery\":\"18 hours\",\"ports\":\"2x Thunderbolt 4 + MagSafe 3 + 3.5mm\",\"os\":\"macOS Sequoia\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("22222222-2002-0000-0000-000000000001"),
+                SKU = "MBA-M4-15-16-256",
+                Name = "Apple MacBook Air M4 15-inch 16GB 256GB",
+                Slug = "apple-macbook-air-m4-15-inch-16gb-256gb",
+                BrandId = apple, CategoryId = laptops,
+                Description = "Apple M4 chip. Massive 15.3-inch Liquid Retina display. 18-hour battery life. 12MP Center Stage camera. MagSafe 3 charging.",
+                ShortDescription = "M4 chip · 18hr battery · 15.3\\\" Retina",
+                Price = 2100000, CompareAtPrice = 2350000,
+                StockQty = 6, IsActive = true, IsFeatured = true,
+                AverageRating = 4.9m, ReviewCount = 43, SoldCount = 27,
                 WeightKg = 1.51m,
-                AttributesJson = "{\"display\":\"15.3 inch Liquid Retina\",\"ram\":\"16GB\",\"storage\":\"512GB SSD\",\"processor\":\"Apple M3\",\"battery\":\"18 hours\",\"os\":\"macOS Sonoma\",\"ports\":\"2x Thunderbolt 3, MagSafe 3\"}"
-            },
-            new Product
-            {
-                SKU = "DELL-XPS15-I7-1TB",
-                Name = "Dell XPS 15 Intel i7 32GB 1TB",
-                Slug = "dell-xps-15-intel-i7-32gb-1tb",
-                BrandId = brandIds["dell"],
-                CategoryId = categoryIds["laptops-computers"],
-                Description = "Premium 15.6 inch laptop with OLED touch display, Intel Core i7, NVIDIA RTX 4060.",
-                ShortDescription = "i7-13700H, RTX 4060, OLED touch display",
-                Price = 1450000,
-                CompareAtPrice = 1600000,
-                StockQty = 8,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.6m,
-                ReviewCount = 32,
-                SoldCount = 19,
-                MetaTitle = "Dell XPS 15 i7 32GB 1TB - ShopFresherz",
-                MetaDescription = "Buy Dell XPS 15 in Nigeria. Premium OLED laptop.",
-                WeightKg = 1.86m,
-                AttributesJson = "{\"display\":\"15.6 inch OLED Touch\",\"ram\":\"32GB DDR5\",\"storage\":\"1TB NVMe SSD\",\"processor\":\"Intel Core i7-13700H\",\"gpu\":\"NVIDIA RTX 4060 8GB\",\"battery\":\"86Whr\",\"os\":\"Windows 11 Pro\"}"
+                AttributesJson = "{\"display\":\"15.3\\\" Liquid Retina\",\"chip\":\"Apple M4\",\"ram\":\"16GB\",\"storage\":\"256GB SSD\",\"battery\":\"18 hours\",\"ports\":\"2x Thunderbolt 4 + MagSafe 3 + 3.5mm\",\"os\":\"macOS Sequoia\"}"
             },
 
-            // GAMING
             new Product
             {
+                Id = new Guid("22222222-2003-0000-0000-000000000001"),
+                SKU = "MBP-M4-14-16-512",
+                Name = "Apple MacBook Pro M4 14-inch 16GB 512GB",
+                Slug = "apple-macbook-pro-m4-14-inch-16gb-512gb",
+                BrandId = apple, CategoryId = laptops,
+                Description = "M4 chip with hardware ray tracing. Stunning 14.2-inch Liquid Retina XDR ProMotion display at 120Hz. 24 hours battery. Three Thunderbolt 4 ports, HDMI, SD card.",
+                ShortDescription = "M4 Pro · 24hr battery · ProMotion XDR",
+                Price = 2750000, CompareAtPrice = 3050000,
+                StockQty = 4, IsActive = true, IsFeatured = true,
+                AverageRating = 4.9m, ReviewCount = 34, SoldCount = 18,
+                WeightKg = 1.55m,
+                AttributesJson = "{\"display\":\"14.2\\\" Liquid Retina XDR ProMotion 120Hz\",\"chip\":\"Apple M4\",\"ram\":\"16GB\",\"storage\":\"512GB SSD\",\"battery\":\"24 hours\",\"ports\":\"3x Thunderbolt 4 + HDMI + SD + MagSafe 3\",\"os\":\"macOS Sequoia\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // CONSOLES
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("33333333-3001-0000-0000-000000000001"),
                 SKU = "PS5-SLIM-DISC",
                 Name = "Sony PlayStation 5 Slim Disc Edition",
                 Slug = "sony-playstation-5-slim-disc-edition",
-                BrandId = brandIds["sony"],
-                CategoryId = categoryIds["games-consoles"],
-                Description = "Experience lightning-fast loading with an ultra-high speed SSD, deeper immersion with haptic feedback.",
-                ShortDescription = "PS5 Slim, disc drive, 1TB SSD",
-                Price = 680000,
-                CompareAtPrice = 750000,
-                StockQty = 15,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.9m,
-                ReviewCount = 203,
-                SoldCount = 178,
-                MetaTitle = "Sony PlayStation 5 Slim - ShopFresherz",
-                MetaDescription = "Buy PS5 Slim in Nigeria. Official Sony PlayStation 5.",
+                BrandId = sony, CategoryId = consoles,
+                Description = "PlayStation 5 Slim with Ultra HD Blu-ray disc drive. 1TB custom SSD. DualSense wireless controller included. 4K gaming at up to 120fps. Haptic feedback and adaptive triggers.",
+                ShortDescription = "PS5 Slim · 1TB SSD · 4K 120fps · Disc Drive",
+                Price = 680000, CompareAtPrice = 750000,
+                StockQty = 3, IsActive = true, IsFeatured = true,
+                AverageRating = 4.9m, ReviewCount = 218, SoldCount = 184,
                 WeightKg = 3.2m,
-                AttributesJson = "{\"storage\":\"1TB SSD\",\"optical\":\"Ultra HD Blu-ray\",\"resolution\":\"4K 120fps\",\"network\":\"WiFi 6\",\"color\":\"White\",\"controllers_included\":\"1x DualSense\"}"
+                AttributesJson = "{\"storage\":\"1TB custom SSD\",\"optical\":\"Ultra HD Blu-ray\",\"resolution\":\"4K 120fps\",\"network\":\"WiFi 6\",\"usb\":\"USB-A + USB-C\",\"controller\":\"1x DualSense\"}"
             },
 
-            // ACCESSORIES
             new Product
             {
-                SKU = "AIRPODS-PRO2-USB",
+                Id = new Guid("33333333-3002-0000-0000-000000000001"),
+                SKU = "XBOX-SX-1TB",
+                Name = "Microsoft Xbox Series X 1TB",
+                Slug = "microsoft-xbox-series-x-1tb",
+                BrandId = microsoft, CategoryId = consoles,
+                Description = "The fastest, most powerful Xbox ever. Custom AMD Zen 2 CPU and RDNA 2 GPU. 12 teraflops of gaming performance. 4K gaming at 60fps, up to 120fps. Quick Resume.",
+                ShortDescription = "12 Teraflops · 4K 120fps · Quick Resume",
+                Price = 650000, CompareAtPrice = 720000,
+                StockQty = 2, IsActive = true, IsFeatured = true,
+                AverageRating = 4.8m, ReviewCount = 142, SoldCount = 97,
+                WeightKg = 4.45m,
+                AttributesJson = "{\"cpu\":\"Custom AMD Zen 2 8-core\",\"gpu\":\"Custom RDNA 2 12TF\",\"storage\":\"1TB custom NVMe SSD\",\"optical\":\"4K Blu-ray\",\"resolution\":\"4K 120fps\",\"network\":\"WiFi 5\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("33333333-3003-0000-0000-000000000001"),
+                SKU = "NSW-OLED-WHT",
+                Name = "Nintendo Switch OLED White",
+                Slug = "nintendo-switch-oled-white",
+                BrandId = nintendo, CategoryId = consoles,
+                Description = "Vibrant 7-inch OLED screen. Enhanced audio. Wide adjustable stand. 64GB internal storage. Dock for TV play. Play at home or on the go.",
+                ShortDescription = "7\\\" OLED · 64GB · TV & Handheld modes",
+                Price = 320000, CompareAtPrice = 370000,
+                StockQty = 6, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 167, SoldCount = 142,
+                WeightKg = 0.42m,
+                AttributesJson = "{\"display\":\"7\\\" OLED\",\"storage\":\"64GB\",\"battery\":\"4.5-9 hours\",\"dock\":\"Included\",\"modes\":\"TV / Tabletop / Handheld\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // GAMING ACCESSORIES
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("44444444-4001-0000-0000-000000000001"),
+                SKU = "PS5-DS-WHT",
+                Name = "Sony PS5 DualSense Wireless Controller White",
+                Slug = "sony-ps5-dualsense-controller-white",
+                BrandId = sony, CategoryId = gamingAcc,
+                Description = "Immersive haptic feedback and adaptive triggers. Built-in microphone. USB-C charging. Integrated rechargeable battery. Textured grips.",
+                ShortDescription = "Haptic Feedback · Adaptive Triggers · USB-C",
+                Price = 65000, CompareAtPrice = 75000,
+                StockQty = 15, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 98, SoldCount = 134,
+                WeightKg = 0.28m,
+                AttributesJson = "{\"compatibility\":\"PS5\",\"connectivity\":\"Wireless + USB-C\",\"battery\":\"Rechargeable\",\"features\":\"Haptic feedback, Adaptive triggers, Built-in mic\",\"color\":\"White\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("44444444-4002-0000-0000-000000000001"),
+                SKU = "PS5-DS-MID-BLK",
+                Name = "Sony PS5 DualSense Midnight Black Controller",
+                Slug = "sony-ps5-dualsense-midnight-black-controller",
+                BrandId = sony, CategoryId = gamingAcc,
+                Description = "All the immersive DualSense features in a sleek Midnight Black colourway. Haptic feedback, adaptive triggers, USB-C charging.",
+                ShortDescription = "Haptic Feedback · Adaptive Triggers · Black",
+                Price = 65000, CompareAtPrice = 75000,
+                StockQty = 12, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 76, SoldCount = 98,
+                WeightKg = 0.28m,
+                AttributesJson = "{\"compatibility\":\"PS5\",\"connectivity\":\"Wireless + USB-C\",\"battery\":\"Rechargeable\",\"features\":\"Haptic feedback, Adaptive triggers, Built-in mic\",\"color\":\"Midnight Black\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("44444444-4003-0000-0000-000000000001"),
+                SKU = "HXCLD2-BLK",
+                Name = "HyperX Cloud II Gaming Headset Black",
+                Slug = "hyperx-cloud-ii-gaming-headset-black",
+                BrandId = hyperx, CategoryId = compAcc,
+                Description = "7.1 virtual surround sound. 53mm drivers. Memory foam leatherette ear cushions. Detachable noise-cancelling microphone. Compatible with PS5, Xbox, PC, Switch.",
+                ShortDescription = "7.1 Surround · 53mm Drivers · Noise-Cancelling Mic",
+                Price = 55000, CompareAtPrice = 68000,
+                StockQty = 20, IsActive = true, IsFeatured = false,
+                AverageRating = 4.6m, ReviewCount = 87, SoldCount = 113,
+                WeightKg = 0.31m,
+                AttributesJson = "{\"sound\":\"7.1 Virtual Surround\",\"drivers\":\"53mm\",\"mic\":\"Detachable noise-cancelling\",\"connectivity\":\"3.5mm + USB adapter\",\"compatibility\":\"PS5, Xbox, PC, Switch, Mobile\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("44444444-4004-0000-0000-000000000001"),
+                SKU = "REDR-K552-RGB",
+                Name = "Redragon K552 Kumara Mechanical RGB Keyboard",
+                Slug = "redragon-k552-kumara-mechanical-rgb-keyboard",
+                BrandId = redragon, CategoryId = compAcc,
+                Description = "Compact TKL 87-key layout with tactile mechanical switches. Per-key RGB backlighting with 9 preset modes. Durable aluminium plate. Braided USB cable.",
+                ShortDescription = "87-Key TKL · RGB · Mechanical · Aluminium",
+                Price = 25000, CompareAtPrice = 32000,
+                StockQty = 30, IsActive = true, IsFeatured = false,
+                AverageRating = 4.4m, ReviewCount = 63, SoldCount = 89,
+                WeightKg = 0.87m,
+                AttributesJson = "{\"layout\":\"87-key TKL compact\",\"switches\":\"Blue mechanical (tactile clicky)\",\"backlight\":\"Per-key RGB 9 modes\",\"frame\":\"Aluminium plate\",\"cable\":\"Braided USB\",\"dimensions\":\"360 x 124 x 35mm\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("44444444-4005-0000-0000-000000000001"),
+                SKU = "RAZER-DAV3-HS",
+                Name = "Razer DeathAdder V3 HyperSpeed Gaming Mouse",
+                Slug = "razer-deathadder-v3-hyperspeed-gaming-mouse",
+                BrandId = razer, CategoryId = compAcc,
+                Description = "Ultra-lightweight 63g design. Focus X 26K optical sensor. 300-hour battery life on a single AA battery. Iconic ergonomic shape. HyperSpeed 2.4GHz wireless.",
+                ShortDescription = "63g · 26K DPI · 300hr battery · Wireless",
+                Price = 38000, CompareAtPrice = 48000,
+                StockQty = 22, IsActive = true, IsFeatured = false,
+                AverageRating = 4.6m, ReviewCount = 79, SoldCount = 115,
+                WeightKg = 0.063m,
+                AttributesJson = "{\"weight\":\"63g\",\"sensor\":\"Focus X 26K optical\",\"dpi\":\"100-26,000 DPI\",\"connectivity\":\"HyperSpeed 2.4GHz wireless\",\"battery\":\"300 hours (AA)\",\"buttons\":\"6 programmable\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("44444444-4006-0000-0000-000000000001"),
+                SKU = "GTR-PRO-CHAIR",
+                Name = "GTRacing Gaming Chair Pro Series Black",
+                Slug = "gtracing-gaming-chair-pro-series-black",
+                BrandId = gtracing, CategoryId = otherCats,
+                Description = "Ergonomic gaming chair with lumbar support pillow, adjustable armrests, recline 90-170°, and breathable PU leather. Supports up to 150kg.",
+                ShortDescription = "Ergonomic · Lumbar Support · 170° Recline",
+                Price = 85000, CompareAtPrice = 110000,
+                StockQty = 1, IsActive = true, IsFeatured = false,
+                AverageRating = 4.3m, ReviewCount = 44, SoldCount = 28,
+                WeightKg = 21m,
+                AttributesJson = "{\"material\":\"PU Leather + Mesh\",\"recline\":\"90-170 degrees\",\"armrests\":\"4D adjustable\",\"lumbar\":\"Adjustable lumbar + headrest pillow\",\"max_weight\":\"150kg\",\"color\":\"Black\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("44444444-4007-0000-0000-000000000001"),
+                SKU = "CM-NOTEPAL-X3",
+                Name = "Cooler Master NotePal X3 Laptop Cooling Pad",
+                Slug = "cooler-master-notepal-x3-cooling-pad",
+                BrandId = coolerMaster, CategoryId = compAcc,
+                Description = "200mm silent fan, USB hub with 3 ports, ergonomic adjustable height stand, blue LED fan. Compatible with laptops up to 17 inches.",
+                ShortDescription = "200mm Fan · USB Hub · 17\\\" Compatible",
+                Price = 18000, CompareAtPrice = 24000,
+                StockQty = 25, IsActive = true, IsFeatured = false,
+                AverageRating = 4.3m, ReviewCount = 52, SoldCount = 76,
+                WeightKg = 0.9m,
+                AttributesJson = "{\"fan\":\"200mm silent\",\"usb_hub\":\"3-port USB hub\",\"compatibility\":\"Up to 17-inch laptops\",\"led\":\"Blue LED\",\"height_adjust\":\"Yes\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("44444444-4008-0000-0000-000000000001"),
+                SKU = "UGREEN-HDMI21-2M",
+                Name = "UGREEN HDMI 2.1 Cable 8K 2 Metres",
+                Slug = "ugreen-hdmi-2-1-cable-8k-2-metres",
+                BrandId = ugreen, CategoryId = cables,
+                Description = "Supports 8K 60Hz, 4K 144Hz, 4K 120fps gaming. Supports eARC, VRR, ALLM. Compatible with PS5, Xbox Series X, PC, TV, projectors.",
+                ShortDescription = "8K 60Hz · 4K 144Hz · VRR · eARC",
+                Price = 5500, CompareAtPrice = 8000,
+                StockQty = 60, IsActive = true, IsFeatured = false,
+                AverageRating = 4.5m, ReviewCount = 88, SoldCount = 167,
+                WeightKg = 0.12m,
+                AttributesJson = "{\"version\":\"HDMI 2.1\",\"max_resolution\":\"8K 60Hz / 4K 144Hz\",\"length\":\"2 metres\",\"features\":\"eARC, VRR, ALLM, HDR\",\"compatibility\":\"PS5, Xbox, PC, TV\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // CHARGERS
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("55555555-5001-0000-0000-000000000001"),
+                SKU = "APPLE-20W-USBC",
+                Name = "Apple 20W USB-C Power Adapter",
+                Slug = "apple-20w-usbc-power-adapter",
+                BrandId = apple, CategoryId = chargers,
+                Description = "Fast-charge iPhone 8 or later up to 50% in around 30 minutes. Compatible with all USB-C devices. Compact fold-prong design. Original Apple accessory.",
+                ShortDescription = "20W · Fast Charge · Original Apple",
+                Price = 18000, CompareAtPrice = 22000,
+                StockQty = 50, IsActive = true, IsFeatured = false,
+                AverageRating = 4.6m, ReviewCount = 124, SoldCount = 287,
+                WeightKg = 0.045m,
+                AttributesJson = "{\"wattage\":\"20W\",\"connector\":\"USB-C\",\"fast_charge\":\"iPhone 50% in 30min\",\"compatibility\":\"All USB-C devices\",\"color\":\"White\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("55555555-5002-0000-0000-000000000001"),
+                SKU = "ANKER-65W-GAN",
+                Name = "Anker 65W GaN USB-C Wall Charger",
+                Slug = "anker-65w-gan-usbc-wall-charger",
+                BrandId = anker, CategoryId = chargers,
+                Description = "65W GaN technology in a compact body. Charges MacBook, iPad, and iPhone simultaneously via 2 USB-C + 1 USB-A ports. PIQ 3.0 fast charging.",
+                ShortDescription = "65W GaN · 3 Ports · MacBook Compatible",
+                Price = 22000, CompareAtPrice = 28000,
+                StockQty = 40, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 98, SoldCount = 178,
+                WeightKg = 0.073m,
+                AttributesJson = "{\"wattage\":\"65W total\",\"technology\":\"GaN\",\"ports\":\"2x USB-C + 1x USB-A\",\"fast_charge\":\"PIQ 3.0\",\"compatibility\":\"MacBook, iPad, iPhone, Android\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("55555555-5003-0000-0000-000000000001"),
+                SKU = "ORAIMO-33W-CHGR",
+                Name = "Oraimo 33W Super Fast Charger",
+                Slug = "oraimo-33w-super-fast-charger",
+                BrandId = oraimo, CategoryId = chargers,
+                Description = "33W GaN fast charging via USB-C. Compatible with Samsung, Xiaomi, TECNO, Infinix and all USB-C smartphones. Compact foldable design.",
+                ShortDescription = "33W GaN · USB-C · Universal Fast Charge",
+                Price = 8500, CompareAtPrice = 12000,
+                StockQty = 80, IsActive = true, IsFeatured = false,
+                AverageRating = 4.3m, ReviewCount = 76, SoldCount = 234,
+                WeightKg = 0.04m,
+                AttributesJson = "{\"wattage\":\"33W\",\"technology\":\"GaN\",\"connector\":\"USB-C\",\"compatibility\":\"Samsung, Xiaomi, TECNO, Infinix, Universal\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("55555555-5004-0000-0000-000000000001"),
+                SKU = "XIAOMI-67W-GAN",
+                Name = "Xiaomi 67W GaN Type-C Fast Charger",
+                Slug = "xiaomi-67w-gan-type-c-fast-charger",
+                BrandId = xiaomi, CategoryId = chargers,
+                Description = "67W GaN fast charger with dual port — USB-C + USB-A. Supports Xiaomi HyperCharge, Qualcomm QC 3.0, PD 3.0. Charges MacBook Air in 90 minutes.",
+                ShortDescription = "67W GaN · USB-C + USB-A · HyperCharge",
+                Price = 9000, CompareAtPrice = 13000,
+                StockQty = 60, IsActive = true, IsFeatured = false,
+                AverageRating = 4.5m, ReviewCount = 62, SoldCount = 198,
+                WeightKg = 0.06m,
+                AttributesJson = "{\"wattage\":\"67W\",\"technology\":\"GaN\",\"ports\":\"1x USB-C + 1x USB-A\",\"protocols\":\"HyperCharge, QC 3.0, PD 3.0\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // POWER BANKS
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("66666666-6001-0000-0000-000000000001"),
+                SKU = "ORAIMO-PB-20K",
+                Name = "Oraimo OPB-P20000P 20000mAh Power Bank",
+                Slug = "oraimo-opb-p20000p-20000mah-power-bank",
+                BrandId = oraimo, CategoryId = powerBanks,
+                Description = "20000mAh capacity with 22.5W PD fast charging. Dual USB-A + USB-C ports. 15W wireless charging. LCD display. Charges iPhone 16 ~4 times.",
+                ShortDescription = "20000mAh · 22.5W PD · Wireless Charging",
+                Price = 22000, CompareAtPrice = 28000,
+                StockQty = 45, IsActive = true, IsFeatured = false,
+                AverageRating = 4.4m, ReviewCount = 89, SoldCount = 198,
+                WeightKg = 0.38m,
+                AttributesJson = "{\"capacity\":\"20000mAh\",\"output\":\"22.5W PD fast charge\",\"wireless\":\"15W\",\"ports\":\"2x USB-A + 1x USB-C\",\"display\":\"LCD battery level\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("66666666-6002-0000-0000-000000000001"),
+                SKU = "ANKER-PC-26800",
+                Name = "Anker PowerCore 26800mAh Power Bank",
+                Slug = "anker-powercore-26800mah-power-bank",
+                BrandId = anker, CategoryId = powerBanks,
+                Description = "Massive 26800mAh capacity with 30W USB-C PD fast charging. Three output ports — charge 3 devices simultaneously. Ultra-high cell quality for 500+ charge cycles.",
+                ShortDescription = "26800mAh · 30W PD · 3 Ports",
+                Price = 35000, CompareAtPrice = 45000,
+                StockQty = 25, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 118, SoldCount = 156,
+                WeightKg = 0.49m,
+                AttributesJson = "{\"capacity\":\"26800mAh\",\"output\":\"30W USB-C PD\",\"ports\":\"2x USB-A + 1x USB-C\",\"simultaneous\":\"3 devices at once\",\"cycles\":\"500+\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("66666666-6003-0000-0000-000000000001"),
+                SKU = "XIAOMI-PB-33W-20K",
+                Name = "Xiaomi 33W Power Bank 20000mAh",
+                Slug = "xiaomi-33w-power-bank-20000mah",
+                BrandId = xiaomi, CategoryId = powerBanks,
+                Description = "20000mAh with 33W fast charging via USB-C PD. Supports Xiaomi HyperCharge. Dual USB-A output. LCD power level display. Slim lightweight design.",
+                ShortDescription = "20000mAh · 33W · HyperCharge · LCD",
+                Price = 28000, CompareAtPrice = 35000,
+                StockQty = 35, IsActive = true, IsFeatured = false,
+                AverageRating = 4.5m, ReviewCount = 74, SoldCount = 134,
+                WeightKg = 0.41m,
+                AttributesJson = "{\"capacity\":\"20000mAh\",\"output\":\"33W USB-C PD\",\"ports\":\"2x USB-A + 1x USB-C\",\"display\":\"LED battery indicator\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // AUDIO
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("77777777-7001-0000-0000-000000000001"),
+                SKU = "APP-AIRPODS-PRO2",
                 Name = "Apple AirPods Pro 2nd Gen USB-C",
                 Slug = "apple-airpods-pro-2nd-gen-usbc",
-                BrandId = brandIds["apple"],
-                CategoryId = categoryIds["accessories"],
-                Description = "Active Noise Cancellation, Adaptive Audio, and Personalised Spatial Audio.",
-                ShortDescription = "ANC, Adaptive Audio, USB-C charging",
-                Price = 320000,
-                CompareAtPrice = 369000,
-                StockQty = 30,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.8m,
-                ReviewCount = 156,
-                SoldCount = 243,
-                MetaTitle = "Apple AirPods Pro 2 USB-C - ShopFresherz",
-                MetaDescription = "Buy AirPods Pro 2 in Nigeria. Active noise cancellation.",
+                BrandId = apple, CategoryId = audio,
+                Description = "Active Noise Cancellation with Adaptive Audio. Personalised Spatial Audio. Transparency mode. H2 chip. USB-C charging case. 6 hours listening with ANC + 30 hours total.",
+                ShortDescription = "ANC · Adaptive Audio · USB-C · H2 Chip",
+                Price = 320000, CompareAtPrice = 369000,
+                StockQty = 18, IsActive = true, IsFeatured = true,
+                AverageRating = 4.9m, ReviewCount = 178, SoldCount = 262,
                 WeightKg = 0.061m,
-                AttributesJson = "{\"type\":\"In-ear TWS\",\"anc\":\"Yes - Active Noise Cancellation\",\"battery\":\"6hrs + 30hrs case\",\"charging\":\"USB-C / MagSafe\",\"water_resistance\":\"IPX4\",\"connectivity\":\"Bluetooth 5.3\"}"
-            },
-            new Product
-            {
-                SKU = "JBL-CHARGE5-BLK",
-                Name = "JBL Charge 5 Portable Speaker Black",
-                Slug = "jbl-charge-5-portable-speaker-black",
-                BrandId = brandIds["jbl"],
-                CategoryId = categoryIds["accessories"],
-                Description = "Massive sound with a powerful built-in powerbank. IP67 waterproof and dustproof.",
-                ShortDescription = "IP67 waterproof, 20hr battery, powerbank",
-                Price = 89000,
-                CompareAtPrice = 110000,
-                StockQty = 22,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.5m,
-                ReviewCount = 89,
-                SoldCount = 167,
-                MetaTitle = "JBL Charge 5 Portable Speaker - ShopFresherz",
-                MetaDescription = "Buy JBL Charge 5 in Nigeria. Waterproof Bluetooth speaker.",
-                WeightKg = 0.96m,
-                AttributesJson = "{\"type\":\"Portable Bluetooth Speaker\",\"battery\":\"20 hours\",\"waterproof\":\"IP67\",\"powerbank\":\"Yes\",\"connectivity\":\"Bluetooth 5.1\",\"color\":\"Black\"}"
+                AttributesJson = "{\"anc\":\"Active Noise Cancellation + Adaptive Audio\",\"chip\":\"H2\",\"battery\":\"6hr + 30hr case\",\"charging\":\"USB-C + MagSafe\",\"water_resistance\":\"IPX4 + IPX4 case\",\"connectivity\":\"Bluetooth 5.3\"}"
             },
 
-            // SMART WATCHES
             new Product
             {
+                Id = new Guid("77777777-7002-0000-0000-000000000001"),
+                SKU = "ORAIMO-FREEPODS5",
+                Name = "Oraimo FreePods 5 TWS Earbuds",
+                Slug = "oraimo-freepods-5-tws-earbuds",
+                BrandId = oraimo, CategoryId = audio,
+                Description = "40dB Active Noise Cancellation. 13mm drivers. 30 hours total battery with case. IPX5 water resistance. Rapid charge — 10 minutes = 2 hours playback.",
+                ShortDescription = "40dB ANC · 30hr battery · IPX5 · TWS",
+                Price = 12500, CompareAtPrice = 18000,
+                StockQty = 60, IsActive = true, IsFeatured = false,
+                AverageRating = 4.2m, ReviewCount = 94, SoldCount = 287,
+                WeightKg = 0.042m,
+                AttributesJson = "{\"anc\":\"40dB Active Noise Cancellation\",\"drivers\":\"13mm\",\"battery\":\"7hr + 23hr case = 30hr total\",\"water\":\"IPX5\",\"fast_charge\":\"10min = 2hr\",\"connectivity\":\"Bluetooth 5.3\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("77777777-7003-0000-0000-000000000001"),
+                SKU = "JBL-CHARGE5-BLK",
+                Name = "JBL Charge 5 Portable Bluetooth Speaker",
+                Slug = "jbl-charge-5-portable-bluetooth-speaker",
+                BrandId = jbl, CategoryId = audio,
+                Description = "Powerful JBL Pro Sound. IP67 waterproof and dustproof. 20 hours battery life. Built-in 7500mAh powerbank charges your devices. PartyBoost to link speakers.",
+                ShortDescription = "IP67 · 20hr battery · Built-in Powerbank",
+                Price = 89000, CompareAtPrice = 110000,
+                StockQty = 20, IsActive = true, IsFeatured = false,
+                AverageRating = 4.6m, ReviewCount = 112, SoldCount = 198,
+                WeightKg = 0.96m,
+                AttributesJson = "{\"waterproof\":\"IP67\",\"battery\":\"20 hours\",\"powerbank\":\"7500mAh built-in\",\"connectivity\":\"Bluetooth 5.1\",\"feature\":\"PartyBoost multi-speaker sync\",\"color\":\"Black\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // PHONE ACCESSORIES
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("88888888-8001-0000-0000-000000000001"),
+                SKU = "SPIGEN-IP16PM-UH",
+                Name = "Spigen iPhone 16 Pro Max Case Ultra Hybrid",
+                Slug = "spigen-iphone-16-pro-max-case-ultra-hybrid",
+                BrandId = spigen, CategoryId = accessories,
+                Description = "Military-grade protection with crystal-clear back. Air Cushion Technology corners. Scratch-resistant raised bezels. Compatible with MagSafe. Yellowing resistant.",
+                ShortDescription = "Military-grade · MagSafe · Crystal Clear",
+                Price = 8500, CompareAtPrice = 12000,
+                StockQty = 80, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 134, SoldCount = 312,
+                WeightKg = 0.045m,
+                AttributesJson = "{\"model\":\"iPhone 16 Pro Max\",\"material\":\"TPU + PC hybrid\",\"protection\":\"Military-grade MIL-STD-810G\",\"magsafe\":\"Compatible\",\"color\":\"Crystal Clear\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("88888888-8002-0000-0000-000000000001"),
+                SKU = "SAMSNG-S25U-CASE",
+                Name = "Samsung Galaxy S25 Ultra Silicone Case Black",
+                Slug = "samsung-galaxy-s25-ultra-silicone-case-black",
+                BrandId = samsung, CategoryId = accessories,
+                Description = "Official Samsung silicone case. S Pen slot compatible. Precise cutouts for all buttons and ports. Soft microfiber lining. Wireless charging compatible.",
+                ShortDescription = "Official · S Pen Slot · Wireless Charging",
+                Price = 6000, CompareAtPrice = 9500,
+                StockQty = 70, IsActive = true, IsFeatured = false,
+                AverageRating = 4.4m, ReviewCount = 67, SoldCount = 178,
+                WeightKg = 0.038m,
+                AttributesJson = "{\"model\":\"Samsung Galaxy S25 Ultra\",\"material\":\"Soft Silicone\",\"spen_slot\":\"Yes\",\"wireless_charge\":\"Compatible\",\"color\":\"Black\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("88888888-8003-0000-0000-000000000001"),
+                SKU = "IP16PM-TEMPERED",
+                Name = "iPhone 16 Pro Max 9H Tempered Glass Screen Protector",
+                Slug = "iphone-16-pro-max-9h-tempered-glass-screen-protector",
+                BrandId = spigen, CategoryId = accessories,
+                Description = "9H hardness tempered glass. Ultra-thin 0.3mm profile. Oleophobic coating. Case-friendly design. Bubble-free adhesive. Pack of 2.",
+                ShortDescription = "9H Glass · 0.3mm · Oleophobic · 2-Pack",
+                Price = 5000, CompareAtPrice = 8000,
+                StockQty = 100, IsActive = true, IsFeatured = false,
+                AverageRating = 4.5m, ReviewCount = 98, SoldCount = 456,
+                WeightKg = 0.02m,
+                AttributesJson = "{\"model\":\"iPhone 16 Pro Max\",\"hardness\":\"9H tempered glass\",\"thickness\":\"0.3mm\",\"quantity\":\"2 pack\",\"coating\":\"Oleophobic\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("88888888-8004-0000-0000-000000000001"),
+                SKU = "SGS25-TEMPERED",
+                Name = "Samsung Galaxy S25 Ultra Screen Protector 2-Pack",
+                Slug = "samsung-galaxy-s25-ultra-screen-protector-2-pack",
+                BrandId = spigen, CategoryId = accessories,
+                Description = "9H hardness tempered glass designed for Galaxy S25 Ultra. Curved edge compatibility. Case-friendly. Fingerprint sensor compatible. Pack of 2.",
+                ShortDescription = "9H Glass · Curved Edge · Fingerprint OK",
+                Price = 3500, CompareAtPrice = 6000,
+                StockQty = 100, IsActive = true, IsFeatured = false,
+                AverageRating = 4.3m, ReviewCount = 76, SoldCount = 312,
+                WeightKg = 0.018m,
+                AttributesJson = "{\"model\":\"Samsung Galaxy S25 Ultra\",\"hardness\":\"9H tempered glass\",\"edge\":\"Curved compatible\",\"quantity\":\"2 pack\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("88888888-8005-0000-0000-000000000001"),
+                SKU = "ANKER-USBC-240W",
+                Name = "Anker 240W USB-C Cable 2 Metres Braided",
+                Slug = "anker-240w-usbc-cable-2-metres-braided",
+                BrandId = anker, CategoryId = cables,
+                Description = "240W maximum power delivery. Supports 4K 60Hz video output. Braided nylon for durability. Compatible with MacBook Pro, iPad Pro, Samsung, and all USB-C devices.",
+                ShortDescription = "240W PD · 4K 60Hz · 2M Braided",
+                Price = 12500, CompareAtPrice = 16500,
+                StockQty = 80, IsActive = true, IsFeatured = false,
+                AverageRating = 4.7m, ReviewCount = 156, SoldCount = 423,
+                WeightKg = 0.08m,
+                AttributesJson = "{\"wattage\":\"240W\",\"video\":\"4K 60Hz\",\"length\":\"2 metres\",\"material\":\"Braided nylon\",\"connector\":\"USB-C to USB-C\",\"compatibility\":\"Universal USB-C\"}"
+            },
+
+            new Product
+            {
+                Id = new Guid("88888888-8006-0000-0000-000000000001"),
+                SKU = "ORAIMO-USBC-100W",
+                Name = "Oraimo 100W USB-C Braided Cable 1 Metre",
+                Slug = "oraimo-100w-usbc-braided-cable-1-metre",
+                BrandId = oraimo, CategoryId = cables,
+                Description = "100W fast charging USB-C cable. Nylon braided for extra durability. Compatible with all USB-C smartphones, tablets, and laptops.",
+                ShortDescription = "100W · Nylon Braided · 1 Metre",
+                Price = 5000, CompareAtPrice = 7500,
+                StockQty = 100, IsActive = true, IsFeatured = false,
+                AverageRating = 4.3m, ReviewCount = 88, SoldCount = 356,
+                WeightKg = 0.04m,
+                AttributesJson = "{\"wattage\":\"100W\",\"length\":\"1 metre\",\"material\":\"Nylon braided\",\"connector\":\"USB-C to USB-C\"}"
+            },
+
+            // ════════════════════════════════════════════════════════════════
+            // SMARTWATCHES
+            // ════════════════════════════════════════════════════════════════
+
+            new Product
+            {
+                Id = new Guid("99999999-9001-0000-0000-000000000001"),
                 SKU = "AW-S10-45-BLK",
                 Name = "Apple Watch Series 10 45mm Black",
                 Slug = "apple-watch-series-10-45mm-black",
-                BrandId = brandIds["apple"],
-                CategoryId = categoryIds["smart-watches"],
-                Description = "Thinnest Apple Watch ever. Advanced health sensors, crash detection, sleep apnea notifications.",
-                ShortDescription = "Thinnest design, health sensors, Always-On",
-                Price = 580000,
-                CompareAtPrice = 650000,
-                StockQty = 20,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.7m,
-                ReviewCount = 78,
-                SoldCount = 92,
-                MetaTitle = "Apple Watch Series 10 45mm - ShopFresherz",
-                MetaDescription = "Buy Apple Watch Series 10 in Nigeria.",
+                BrandId = apple, CategoryId = smartWatches,
+                Description = "Thinnest Apple Watch ever. Advanced health features: sleep apnea notifications, ECG, blood oxygen. Crash detection. Always-On Retina display. 18-hour battery.",
+                ShortDescription = "Thinnest ever · Sleep Apnea · ECG · AOD",
+                Price = 580000, CompareAtPrice = 650000,
+                StockQty = 12, IsActive = true, IsFeatured = true,
+                AverageRating = 4.8m, ReviewCount = 87, SoldCount = 103,
                 WeightKg = 0.042m,
-                AttributesJson = "{\"display\":\"45mm Always-On Retina\",\"health\":\"ECG, Blood Oxygen, Temperature\",\"battery\":\"18 hours\",\"water_resistance\":\"50m\",\"connectivity\":\"GPS + Cellular\",\"os\":\"watchOS 11\"}"
+                AttributesJson = "{\"display\":\"45mm Always-On Retina LTPO\",\"health\":\"ECG, Blood Oxygen, Sleep Apnea, Temperature\",\"battery\":\"18 hours\",\"water\":\"50m swim-proof\",\"connectivity\":\"GPS + Cellular\",\"os\":\"watchOS 11\"}"
             },
 
-            // COMPUTING ACCESSORIES
             new Product
             {
-                SKU = "LG-MX-MASTER3S",
-                Name = "Logitech MX Master 3S Wireless Mouse",
-                Slug = "logitech-mx-master-3s-wireless-mouse",
-                BrandId = brandIds["logitech"],
-                CategoryId = categoryIds["computing-accessories"],
-                Description = "8K DPI precision tracking on any surface including glass. Ultra-fast MagSpeed scroll.",
-                ShortDescription = "8K DPI, MagSpeed scroll, works on glass",
-                Price = 52000,
-                CompareAtPrice = 65000,
-                StockQty = 35,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.8m,
-                ReviewCount = 112,
-                SoldCount = 198,
-                MetaTitle = "Logitech MX Master 3S - ShopFresherz",
-                MetaDescription = "Buy Logitech MX Master 3S in Nigeria.",
-                WeightKg = 0.141m,
-                AttributesJson = "{\"dpi\":\"200-8000 DPI\",\"connectivity\":\"Bluetooth / USB receiver\",\"battery\":\"70 days\",\"buttons\":\"7 programmable\",\"compatibility\":\"Windows, macOS, Linux\",\"color\":\"Graphite\"}"
+                Id = new Guid("99999999-9002-0000-0000-000000000001"),
+                SKU = "SGW7-44-BLK",
+                Name = "Samsung Galaxy Watch 7 44mm Black",
+                Slug = "samsung-galaxy-watch-7-44mm-black",
+                BrandId = samsung, CategoryId = smartWatches,
+                Description = "Exynos W1000 5-core chip. Advanced health monitoring: body composition, sleep score, temperature sensor. Galaxy AI. 40-hour battery. 5ATM + IP68.",
+                ShortDescription = "Exynos W1000 · Galaxy AI · 40hr battery",
+                Price = 320000, CompareAtPrice = 375000,
+                StockQty = 15, IsActive = true, IsFeatured = false,
+                AverageRating = 4.5m, ReviewCount = 56, SoldCount = 74,
+                WeightKg = 0.033m,
+                AttributesJson = "{\"chip\":\"Exynos W1000\",\"display\":\"44mm Super AMOLED\",\"health\":\"Body composition, sleep, temperature\",\"battery\":\"40 hours\",\"water\":\"5ATM + IP68\",\"ai\":\"Galaxy AI\"}"
             },
 
-            // CABLES
+            // ════════════════════════════════════════════════════════════════
+            // RING LIGHTS & STANDS
+            // ════════════════════════════════════════════════════════════════
+
             new Product
             {
-                SKU = "ANKER-USBC-240W-2M",
-                Name = "Anker USB-C Cable 240W 2 Metres",
-                Slug = "anker-usbc-cable-240w-2m",
-                BrandId = brandIds["apple"],
-                CategoryId = categoryIds["cables"],
-                Description = "240W fast charging cable compatible with MacBook Pro, iPad Pro, Samsung Galaxy and more.",
-                ShortDescription = "240W PD, 2m, braided nylon",
-                Price = 12500,
-                CompareAtPrice = 16000,
-                StockQty = 80,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.6m,
-                ReviewCount = 234,
-                SoldCount = 567,
-                MetaTitle = "Anker 240W USB-C Cable 2m - ShopFresherz",
-                MetaDescription = "Buy Anker 240W USB-C cable in Nigeria.",
-                WeightKg = 0.08m,
-                AttributesJson = "{\"wattage\":\"240W\",\"length\":\"2 metres\",\"connector\":\"USB-C to USB-C\",\"material\":\"Braided Nylon\",\"compatibility\":\"Universal USB-C devices\"}"
+                Id = new Guid("AAAAAAAA-A001-0000-0000-000000000001"),
+                SKU = "NEEWER-18RL-KIT",
+                Name = "Neewer 18-Inch LED Ring Light Kit with Stand",
+                Slug = "neewer-18-inch-led-ring-light-kit-with-stand",
+                BrandId = neewer, CategoryId = accessories,
+                Description = "18-inch LED ring light, 3200-5500K bi-colour temperature, 200cm adjustable light stand, phone holder mount, carrying bag. Perfect for TikTok, YouTube, portraits, video calls.",
+                ShortDescription = "18\\\" LED · Bi-colour · Stand + Phone Mount",
+                Price = 32000, CompareAtPrice = 42000,
+                StockQty = 20, IsActive = true, IsFeatured = false,
+                AverageRating = 4.4m, ReviewCount = 67, SoldCount = 89,
+                WeightKg = 2.8m,
+                AttributesJson = "{\"diameter\":\"18 inches\",\"colour_temp\":\"3200K-5500K bi-colour\",\"stand\":\"200cm adjustable\",\"phone_holder\":\"Included\",\"bag\":\"Carrying bag included\",\"uses\":\"Selfie, YouTube, TikTok, Portrait\"}"
             },
 
-            // ELECTRONICS
             new Product
             {
-                SKU = "SAMSUNG-65-QLED-4K",
-                Name = "Samsung 65 Inch QLED 4K Smart TV",
-                Slug = "samsung-65-inch-qled-4k-smart-tv",
-                BrandId = brandIds["samsung"],
-                CategoryId = categoryIds["electronics"],
-                Description = "Quantum Dot technology delivers vivid colour. Tizen OS with built-in streaming apps.",
-                ShortDescription = "QLED, 4K, Tizen OS, 120Hz",
-                Price = 980000,
-                CompareAtPrice = 1150000,
-                StockQty = 7,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.6m,
-                ReviewCount = 56,
-                SoldCount = 34,
-                MetaTitle = "Samsung 65 QLED 4K Smart TV - ShopFresherz",
-                MetaDescription = "Buy Samsung 65 inch QLED TV in Nigeria.",
-                WeightKg = 22.5m,
-                AttributesJson = "{\"display\":\"65 inch QLED\",\"resolution\":\"4K UHD\",\"refresh_rate\":\"120Hz\",\"os\":\"Tizen\",\"hdmi_ports\":\"4\",\"smart_features\":\"Netflix, YouTube, Prime Video\"}"
-            },
-
-            // ROMOSS
-            new Product
-            {
-                SKU = "ROMOSS-30000-PD",
-                Name = "Romoss Sense 8P+ 30000mAh Power Bank",
-                Slug = "romoss-sense-8p-30000mah-power-bank",
-                BrandId = brandIds["romoss"],
-                CategoryId = categoryIds["romoss"],
-                Description = "30000mAh massive capacity with 65W PD fast charging. Charges MacBook, iPad and phones.",
-                ShortDescription = "30000mAh, 65W PD, charges MacBook",
-                Price = 35000,
-                CompareAtPrice = 45000,
-                StockQty = 50,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.5m,
-                ReviewCount = 189,
-                SoldCount = 312,
-                MetaTitle = "Romoss 30000mAh Power Bank - ShopFresherz",
-                MetaDescription = "Buy Romoss 30000mAh power bank in Nigeria.",
-                WeightKg = 0.58m,
-                AttributesJson = "{\"capacity\":\"30000mAh\",\"max_output\":\"65W PD\",\"ports\":\"2x USB-A, 1x USB-C\",\"input\":\"USB-C 65W\",\"compatibility\":\"MacBook, iPad, Phones\",\"color\":\"Black\"}"
-            },
-
-            // HOME & KITCHEN TECH
-            new Product
-            {
-                SKU = "XIAOMI-ROBOT-S10",
-                Name = "Xiaomi Robot Vacuum S10 Pro",
-                Slug = "xiaomi-robot-vacuum-s10-pro",
-                BrandId = brandIds["samsung"],
-                CategoryId = categoryIds["home-kitchen-tech"],
-                Description = "4000Pa suction, sonic mopping, LiDAR navigation. Auto empty base station included.",
-                ShortDescription = "4000Pa suction, LiDAR, auto-empty base",
-                Price = 285000,
-                CompareAtPrice = 350000,
-                StockQty = 10,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.4m,
-                ReviewCount = 43,
-                SoldCount = 29,
-                MetaTitle = "Xiaomi Robot Vacuum S10 Pro - ShopFresherz",
-                MetaDescription = "Buy Xiaomi Robot Vacuum in Nigeria.",
-                WeightKg = 3.8m,
-                AttributesJson = "{\"suction\":\"4000Pa\",\"navigation\":\"LiDAR\",\"mopping\":\"Sonic vibration\",\"battery\":\"5200mAh (180min)\",\"auto_empty\":\"Yes\",\"app\":\"Mi Home / Xiaomi Home\"}"
-            },
-
-            // TABLETS
-            new Product
-            {
-                SKU = "IPAD-PRO-M4-11-256",
-                Name = "Apple iPad Pro M4 11 Inch 256GB WiFi",
-                Slug = "apple-ipad-pro-m4-11-inch-256gb-wifi",
-                BrandId = brandIds["apple"],
-                CategoryId = categoryIds["tablets"],
-                Description = "Thinnest Apple product ever. M4 chip, Ultra Retina XDR OLED display.",
-                ShortDescription = "M4 chip, OLED display, thinnest ever",
-                Price = 1250000,
-                CompareAtPrice = 1399000,
-                StockQty = 14,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.8m,
-                ReviewCount = 67,
-                SoldCount = 45,
-                MetaTitle = "Apple iPad Pro M4 11 inch - ShopFresherz",
-                MetaDescription = "Buy iPad Pro M4 in Nigeria.",
-                WeightKg = 0.444m,
-                AttributesJson = "{\"display\":\"11 inch Ultra Retina XDR OLED\",\"chip\":\"Apple M4\",\"storage\":\"256GB\",\"connectivity\":\"WiFi 6E\",\"usb\":\"USB-C Thunderbolt 4\",\"os\":\"iPadOS 17\"}"
-            },
-
-            // NEW ARRIVALS
-            new Product
-            {
-                SKU = "INFINIX-GT20-PRO",
-                Name = "Infinix GT 20 Pro Gaming Phone",
-                Slug = "infinix-gt-20-pro-gaming-phone",
-                BrandId = brandIds["infinix"],
-                CategoryId = categoryIds["new-arrivals"],
-                Description = "144Hz AMOLED gaming display, Dimensity 8200 Ultimate, RGB lighting system.",
-                ShortDescription = "144Hz AMOLED, Dimensity 8200, RGB lights",
-                Price = 235000,
-                CompareAtPrice = 270000,
-                StockQty = 30,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.3m,
-                ReviewCount = 28,
-                SoldCount = 41,
-                MetaTitle = "Infinix GT 20 Pro Gaming Phone - ShopFresherz",
-                MetaDescription = "Buy Infinix GT 20 Pro in Nigeria.",
-                WeightKg = 0.215m,
-                AttributesJson = "{\"display\":\"6.78 inch 144Hz AMOLED\",\"ram\":\"12GB\",\"storage\":\"256GB\",\"processor\":\"Dimensity 8200 Ultimate\",\"battery\":\"5000mAh 45W\",\"network\":\"5G\",\"special\":\"RGB lighting system\"}"
-            },
-
-            // MUSICAL EQUIPMENT
-            new Product
-            {
-                SKU = "BLUE-YETI-USB-BLK",
-                Name = "Blue Yeti USB Microphone Black",
-                Slug = "blue-yeti-usb-microphone-black",
-                BrandId = brandIds["logitech"],
-                CategoryId = categoryIds["musical-equipment"],
-                Description = "Professional USB microphone for streaming, podcasting, gaming and home studio recording.",
-                ShortDescription = "Professional USB mic, 4 polar patterns",
-                Price = 68000,
-                CompareAtPrice = 85000,
-                StockQty = 18,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.7m,
-                ReviewCount = 145,
-                SoldCount = 89,
-                MetaTitle = "Blue Yeti USB Microphone - ShopFresherz",
-                MetaDescription = "Buy Blue Yeti USB microphone in Nigeria.",
-                WeightKg = 0.55m,
-                AttributesJson = "{\"type\":\"USB Condenser Microphone\",\"polar_patterns\":\"Cardioid, Bidirectional, Omnidirectional, Stereo\",\"sample_rate\":\"48kHz/16-bit\",\"connection\":\"USB\",\"compatible\":\"Windows, macOS\",\"color\":\"Blackout\"}"
-            },
-
-            // COMPUTER MOUSE
-            new Product
-            {
-                SKU = "RAZER-DA-V3-HYP",
-                Name = "Razer DeathAdder V3 HyperSpeed",
-                Slug = "razer-deathadder-v3-hyperspeed",
-                BrandId = brandIds["logitech"],
-                CategoryId = categoryIds["computer-mouse"],
-                Description = "Ultra-lightweight 63g gaming mouse. 300hr battery, Focus X 26K optical sensor.",
-                ShortDescription = "63g ultralight, 300hr battery, 26K DPI",
-                Price = 38000,
-                CompareAtPrice = 48000,
-                StockQty = 25,
-                IsActive = true,
-                IsFeatured = false,
-                AverageRating = 4.6m,
-                ReviewCount = 76,
-                SoldCount = 112,
-                MetaTitle = "Razer DeathAdder V3 HyperSpeed - ShopFresherz",
-                MetaDescription = "Buy Razer DeathAdder V3 in Nigeria.",
-                WeightKg = 0.063m,
-                AttributesJson = "{\"dpi\":\"100-26000 DPI\",\"weight\":\"63g\",\"battery\":\"300 hours\",\"connectivity\":\"Wireless 2.4GHz HyperSpeed\",\"sensor\":\"Focus X 26K Optical\",\"color\":\"Black\"}"
-            },
-
-            // FLASH DEAL PRODUCT (HP OMEN)
-            new Product
-            {
-                SKU = "HP-OMEN-16-RTX4070",
-                Name = "HP Omen 16 Gaming Laptop RTX 4070",
-                Slug = "hp-omen-16-gaming-laptop-rtx4070",
-                BrandId = brandIds["hp"],
-                CategoryId = categoryIds["laptops-computers"],
-                Description = "High-performance gaming laptop. Intel i7-13700HX, RTX 4070, 165Hz IPS display.",
-                ShortDescription = "i7-13700HX, RTX 4070, 165Hz display",
-                Price = 1100000,
-                CompareAtPrice = 1350000,
-                StockQty = 6,
-                IsActive = true,
-                IsFeatured = true,
-                AverageRating = 4.5m,
-                ReviewCount = 38,
-                SoldCount = 22,
-                MetaTitle = "HP Omen 16 RTX 4070 Gaming Laptop - ShopFresherz",
-                MetaDescription = "Buy HP Omen 16 gaming laptop in Nigeria.",
-                WeightKg = 2.4m,
-                AttributesJson = "{\"display\":\"16.1 inch 165Hz IPS\",\"ram\":\"16GB DDR5\",\"storage\":\"512GB NVMe SSD\",\"processor\":\"Intel i7-13700HX\",\"gpu\":\"NVIDIA RTX 4070 8GB\",\"battery\":\"83Whr\",\"os\":\"Windows 11 Home\"}"
+                Id = new Guid("AAAAAAAA-A002-0000-0000-000000000001"),
+                SKU = "FLEXSTAND-PHONE",
+                Name = "Flexible Gooseneck Phone Stand & Holder",
+                Slug = "flexible-gooseneck-phone-stand-holder",
+                BrandId = neewer, CategoryId = accessories,
+                Description = "360° flexible gooseneck arm with strong clamp. Compatible with all smartphones. Adjustable viewing angle. Hands-free for video calls, watching, recipes. Desk clip included.",
+                ShortDescription = "360° Flexible · Clamp Mount · Universal",
+                Price = 4500, CompareAtPrice = 7000,
+                StockQty = 100, IsActive = true, IsFeatured = false,
+                AverageRating = 4.2m, ReviewCount = 88, SoldCount = 234,
+                WeightKg = 0.22m,
+                AttributesJson = "{\"arm\":\"Flexible gooseneck\",\"rotation\":\"360 degrees\",\"mount\":\"Desk clamp\",\"compatibility\":\"All smartphones 4-7 inch\",\"uses\":\"Video calls, YouTube, recipes\"}"
             },
         };
 
-        await context.Products.AddRangeAsync(products);
+        HashSet<string> existingSkus = (await context.Products
+            .Select(p => p.SKU)
+            .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        HashSet<Guid> existingProductIds = (await context.Products
+            .Select(p => p.Id)
+            .ToListAsync()).ToHashSet();
+
+        List<Product> missingProducts = products
+            .Where(p => !existingSkus.Contains(p.SKU) && !existingProductIds.Contains(p.Id))
+            .ToList();
+
+        if (missingProducts.Count == 0) return;
+
+        await context.Products.AddRangeAsync(missingProducts);
         await context.SaveChangesAsync();
     }
+
+    // ── Flash deal ────────────────────────────────────────────────────────────
 
     private static async Task SeedFlashDealAsync(ShopFresherzDbContext context)
     {
         if (await context.FlashDeals.AnyAsync()) return;
 
-        Guid? productId = await context.Products
-            .Where(p => p.Slug == "hp-omen-16-gaming-laptop-rtx4070")
-            .Select(p => (Guid?)p.Id)
-            .FirstOrDefaultAsync();
-
-        if (!productId.HasValue) return;
+        Guid ps5Id = new("33333333-3001-0000-0000-000000000001");
+        bool ps5Exists = await context.Products.AnyAsync(p => p.Id == ps5Id);
+        if (!ps5Exists) return;
 
         FlashDeal deal = new()
         {
-            ProductId = productId.Value,
-            SalePrice = 899000,
-            OriginalPrice = 1100000,
-            StartsAt = DateTime.UtcNow,
-            EndsAt = DateTime.UtcNow.AddDays(3),
-            MaxQuantity = 5,
-            IsActive = true,
+            ProductId    = ps5Id,
+            SalePrice    = 590000,
+            OriginalPrice = 680000,
+            StartsAt     = DateTime.UtcNow,
+            EndsAt       = DateTime.UtcNow.AddDays(3),
+            MaxQuantity  = 3,
+            IsActive     = true,
         };
 
         await context.FlashDeals.AddAsync(deal);
         await context.SaveChangesAsync();
     }
 
+    // ── Banners ───────────────────────────────────────────────────────────────
+
     private static async Task SeedBannersAsync(ShopFresherzDbContext context)
     {
-        if (await context.Set<HomepageBanner>().AnyAsync()) return;
-
         List<HomepageBanner> banners = new()
         {
             new()
             {
-                Title = "Freshest Tech in Nigeria",
-                SubTitle = "New arrivals every week",
-                CtaText = "Shop New Arrivals",
-                LinkUrl = "/category/new-arrivals",
-                ImageUrl = "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=1280&q=80",
-                SortOrder = 1,
-                IsActive = true,
+                Tag      = "New Arrival",
+                Title    = "iPhone 16 Pro Max - Just Arrived",
+                SubTitle = "A18 Pro - Titanium - 48MP Camera",
+                CtaText  = "Shop iPhones",
+                LinkUrl  = "/category/phones",
+                ImageUrl = "https://res.cloudinary.com/dj0hxpss4/image/upload/shopfresherz/banners/iphone16-hero.jpg",
+                SortOrder = 1, IsActive = true,
             },
             new()
             {
-                Title = "PS5 Slim Now Available",
-                SubTitle = "Limited stock \u2014 order now",
-                CtaText = "Get Yours Now",
-                LinkUrl = "/category/games-consoles",
-                ImageUrl = "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=1280&q=80",
-                SortOrder = 2,
-                IsActive = true,
+                Tag      = "Limited Stock",
+                Title    = "PS5 Slim - Limited Stock",
+                SubTitle = "4K 120fps - 1TB SSD - DualSense Included",
+                CtaText  = "Get Yours Now",
+                LinkUrl  = "/category/gaming",
+                ImageUrl = "https://res.cloudinary.com/dj0hxpss4/image/upload/shopfresherz/banners/ps5-slim-hero.jpg",
+                SortOrder = 2, IsActive = true,
             },
             new()
             {
-                Title = "Up to 30% Off Accessories",
-                SubTitle = "AirPods, JBL, Anker and more",
-                CtaText = "Shop Accessories",
-                LinkUrl = "/category/accessories",
-                ImageUrl = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1280&q=80",
-                SortOrder = 3,
-                IsActive = true,
+                Tag      = "Laptop Deal",
+                Title    = "MacBook Air M4",
+                SubTitle = "Supercharged performance - 18-hour battery",
+                CtaText  = "Shop MacBooks",
+                LinkUrl  = "/category/laptops",
+                ImageUrl = "https://res.cloudinary.com/dj0hxpss4/image/upload/shopfresherz/banners/macbook-m4-hero.jpg",
+                SortOrder = 3, IsActive = true,
             },
         };
 
-        await context.Set<HomepageBanner>().AddRangeAsync(banners);
+        List<HomepageBanner> existingBanners = await context.Set<HomepageBanner>().ToListAsync();
+        foreach (HomepageBanner existing in existingBanners)
+        {
+            HomepageBanner? source = banners.FirstOrDefault(b =>
+                b.Title == existing.Title || b.SortOrder == existing.SortOrder);
+            if (source is not null && string.IsNullOrWhiteSpace(existing.Tag))
+            {
+                existing.Tag = source.Tag;
+            }
+        }
+
+        HashSet<string> existingTitles = existingBanners
+            .Select(b => b.Title)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<int> existingSortOrders = existingBanners
+            .Select(b => b.SortOrder)
+            .ToHashSet();
+
+        List<HomepageBanner> missingBanners = banners
+            .Where(b => !existingTitles.Contains(b.Title) && !existingSortOrders.Contains(b.SortOrder))
+            .ToList();
+
+        if (missingBanners.Count > 0)
+        {
+            await context.Set<HomepageBanner>().AddRangeAsync(missingBanners);
+        }
+
         await context.SaveChangesAsync();
     }
+    // ── Coupons ───────────────────────────────────────────────────────────────
 
     private static async Task SeedCouponsAsync(ShopFresherzDbContext context)
     {
@@ -631,41 +1214,31 @@ public static class DataSeeder
             new()
             {
                 Code = "WELCOME10",
-                Type = CouponType.Percentage,
-                Value = 10,
-                MinimumOrderAmount = 50000,
-                MaxUses = 1000,
-                MaxUsesPerUser = 1,
-                ExpiresAt = DateTime.UtcNow.AddMonths(6),
-                IsActive = true,
+                Type = CouponType.Percentage, Value = 10,
+                MinimumOrderAmount = 50000, MaxUses = 1000, MaxUsesPerUser = 1,
+                ExpiresAt = DateTime.UtcNow.AddMonths(6), IsActive = true,
             },
             new()
             {
                 Code = "FRESHERZ5000",
-                Type = CouponType.Fixed,
-                Value = 5000,
-                MinimumOrderAmount = 100000,
-                MaxUses = 500,
-                MaxUsesPerUser = 1,
-                ExpiresAt = DateTime.UtcNow.AddMonths(3),
-                IsActive = true,
+                Type = CouponType.Fixed, Value = 5000,
+                MinimumOrderAmount = 100000, MaxUses = 500, MaxUsesPerUser = 1,
+                ExpiresAt = DateTime.UtcNow.AddMonths(3), IsActive = true,
             },
             new()
             {
                 Code = "GADGET15",
-                Type = CouponType.Percentage,
-                Value = 15,
-                MinimumOrderAmount = 200000,
-                MaxUses = 200,
-                MaxUsesPerUser = 1,
-                ExpiresAt = DateTime.UtcNow.AddMonths(2),
-                IsActive = true,
+                Type = CouponType.Percentage, Value = 15,
+                MinimumOrderAmount = 200000, MaxUses = 200, MaxUsesPerUser = 1,
+                ExpiresAt = DateTime.UtcNow.AddMonths(2), IsActive = true,
             },
         };
 
         await context.Coupons.AddRangeAsync(coupons);
         await context.SaveChangesAsync();
     }
+
+    // ── Reviews ───────────────────────────────────────────────────────────────
 
     private static async Task SeedReviewsAsync(ShopFresherzDbContext context)
     {
@@ -674,50 +1247,230 @@ public static class DataSeeder
             .Select(u => (Guid?)u.Id)
             .FirstOrDefaultAsync();
 
-        Guid? iphoneId = await context.Products
-            .Where(p => p.Slug == "apple-iphone-16-pro-max-256gb")
-            .Select(p => (Guid?)p.Id)
-            .FirstOrDefaultAsync();
+        Guid iphoneId = new("11111111-1001-0000-0000-000000000001");
+        Guid iphoneProId = new("11111111-1002-0000-0000-000000000001");
+        Guid samsungUltraId = new("11111111-1006-0000-0000-000000000001");
+        HashSet<Guid> seededReviewProductIds = new() { iphoneId, iphoneProId, samsungUltraId };
+        HashSet<Guid> existingProductIds = (await context.Products
+            .Where(p => seededReviewProductIds.Contains(p.Id))
+            .Select(p => p.Id)
+            .ToListAsync()).ToHashSet();
 
-        if (!adminId.HasValue || !iphoneId.HasValue) return;
-
-        if (await context.Reviews.AnyAsync(r => r.ProductId == iphoneId.Value)) return;
+        if (!adminId.HasValue || existingProductIds.Count == 0) return;
 
         List<Review> reviews = new()
         {
             new()
             {
-                UserId = adminId.Value,
-                ProductId = iphoneId.Value,
-                Rating = 5,
-                Title = "Absolutely incredible phone",
-                Body = "The camera system is unmatched. Face ID is instant. Battery easily lasts a full day of heavy use. Best iPhone I have ever owned.",
-                IsApproved = true,
-                IsVerifiedPurchase = true,
+                UserId = adminId.Value, ProductId = iphoneId,
+                Rating = 5, Title = "Absolutely incredible phone",
+                Body = "The A18 Pro chip is insanely fast. Camera is unmatched — Night mode portraits are stunning. Battery easily lasts a full day of heavy use. Best iPhone I have ever owned.",
+                IsApproved = true, IsVerifiedPurchase = true,
             },
             new()
             {
-                UserId = adminId.Value,
-                ProductId = iphoneId.Value,
-                Rating = 5,
-                Title = "Worth every kobo",
-                Body = "Titanium build feels premium. The action button is very useful. Display is stunning outdoors. Highly recommend to anyone upgrading.",
-                IsApproved = true,
-                IsVerifiedPurchase = true,
+                UserId = adminId.Value, ProductId = iphoneProId,
+                Rating = 5, Title = "Worth every kobo",
+                Body = "Titanium build feels incredibly premium. The action button is so useful. Camera Control is a game changer. Display is stunning even outdoors. ShopFresherz delivery was super fast.",
+                IsApproved = true, IsVerifiedPurchase = true,
             },
             new()
             {
-                UserId = adminId.Value,
-                ProductId = iphoneId.Value,
-                Rating = 4,
-                Title = "Great but pricey",
-                Body = "Performance is flawless, camera is top notch. Only downside is the price but you get what you pay for. ShopFresherz delivery was fast too.",
-                IsApproved = true,
-                IsVerifiedPurchase = false,
+                UserId = adminId.Value, ProductId = samsungUltraId,
+                Rating = 4, Title = "Top tier but pricey",
+                Body = "Performance is flawless and the camera system is top notch. Only the price is a stretch but you genuinely get what you pay for at this level. Recommend to anyone who can afford it.",
+                IsApproved = true, IsVerifiedPurchase = false,
             },
         };
 
-        await context.Reviews.AddRangeAsync(reviews);
+        HashSet<Guid> existingReviewProductIds = (await context.Reviews
+            .Where(r => r.UserId == adminId.Value && seededReviewProductIds.Contains(r.ProductId))
+            .Select(r => r.ProductId)
+            .ToListAsync()).ToHashSet();
+
+        List<Review> missingReviews = reviews
+            .Where(r => existingProductIds.Contains(r.ProductId) && !existingReviewProductIds.Contains(r.ProductId))
+            .ToList();
+
+        if (missingReviews.Count == 0) return;
+
+        await context.Reviews.AddRangeAsync(missingReviews);
+        await context.SaveChangesAsync();
+    }
+
+    // ── Promotional Sections ──────────────────────────────────────────────────
+
+    private static async Task SeedPromotionalSectionsAsync(ShopFresherzDbContext context)
+    {
+        // Clear any stale tracked entities left by earlier seed methods that may have failed.
+        context.ChangeTracker.Clear();
+
+        HashSet<string> existingSlugIds = (await context.PromotionalSections
+            .Select(s => s.SlugId)
+            .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var sections = new List<PromotionalSection>
+        {
+            // ── Hero Banners ─────────────────────────────────────────────────
+            new()
+            {
+                SectionKey  = "hero",
+                ContentType = "hero-banner",
+                SlugId      = "hero-iphone-16-pro",
+                Tag         = "New Arrival",
+                Badge       = "Hot",
+                Title       = "iPhone 16 Pro Max — Power Redefined",
+                PriceText   = "From $1,099",
+                CtaText     = "Shop Now",
+                ImageUrl    = "https://images.unsplash.com/photo-1695048133142-1a20484429be?w=1200&auto=format&fit=crop",
+                SortOrder   = 1,
+                IsActive    = true,
+            },
+            new()
+            {
+                SectionKey  = "hero",
+                ContentType = "hero-banner",
+                SlugId      = "hero-samsung-s25",
+                Tag         = "Best Seller",
+                Badge       = "Sale",
+                Title       = "Samsung Galaxy S25 Ultra — See Everything",
+                PriceText   = "From $899",
+                CtaText     = "Explore",
+                ImageUrl    = "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=1200&auto=format&fit=crop",
+                SortOrder   = 2,
+                IsActive    = true,
+            },
+            new()
+            {
+                SectionKey  = "hero",
+                ContentType = "hero-banner",
+                SlugId      = "hero-macbook-pro-m4",
+                Tag         = "Limited Offer",
+                Badge       = "Deal",
+                Title       = "MacBook Pro M4 — Built for Speed",
+                PriceText   = "From $1,599",
+                CtaText     = "Get Yours",
+                ImageUrl    = "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=1200&auto=format&fit=crop",
+                SortOrder   = 3,
+                IsActive    = true,
+            },
+
+            // ── Best Deal Cards ───────────────────────────────────────────────
+            new()
+            {
+                SectionKey        = "best-deal",
+                ContentType       = "best-deal-card",
+                SlugId            = "deal-airpods-pro",
+                Title             = "AirPods Pro (2nd Gen)",
+                Badge             = "Best Value",
+                Rating            = 4.8m,
+                OriginalPriceText = "$249",
+                SalePriceText     = "$189",
+                Description       = "Active noise cancellation, Adaptive Audio, and up to 30 hours total listening time with MagSafe charging case.",
+                ImageUrl          = "https://images.unsplash.com/photo-1588423771073-b8903fead85c?w=600&auto=format&fit=crop",
+                SortOrder         = 1,
+                IsActive          = true,
+            },
+            new()
+            {
+                SectionKey        = "best-deal",
+                ContentType       = "best-deal-card",
+                SlugId            = "deal-samsung-watch7",
+                Title             = "Samsung Galaxy Watch 7",
+                Badge             = "Top Rated",
+                Rating            = 4.6m,
+                OriginalPriceText = "$299",
+                SalePriceText     = "$229",
+                Description       = "Advanced health tracking with BioActive sensor, sleep coaching, and 40 hours battery life in power-saving mode.",
+                ImageUrl          = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop",
+                SortOrder         = 2,
+                IsActive          = true,
+            },
+            new()
+            {
+                SectionKey        = "best-deal",
+                ContentType       = "best-deal-card",
+                SlugId            = "deal-sony-wh1000xm5",
+                Title             = "Sony WH-1000XM5 Headphones",
+                Badge             = "Editor's Pick",
+                Rating            = 4.9m,
+                OriginalPriceText = "$399",
+                SalePriceText     = "$299",
+                Description       = "Industry-leading noise cancellation with 30 hours battery, multipoint connection, and crystal-clear hands-free calling.",
+                ImageUrl          = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop",
+                SortOrder         = 3,
+                IsActive          = true,
+            },
+
+            // ── Promo Banner ──────────────────────────────────────────────────
+            new()
+            {
+                SectionKey  = "promo-banner",
+                ContentType = "promo-banner",
+                SlugId      = "promo-flash-sale-2024",
+                Title       = "Up to 40% Off Top Brands",
+                Subtitle    = "Limited time deals on iPhones, Samsung, Sony and more. Don't miss out!",
+                CtaText     = "View All Deals",
+                ImageUrl    = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1400&auto=format&fit=crop",
+                ImageAlt    = "Flash sale promotional banner featuring smartphones and electronics",
+                Badge       = "Flash Sale",
+                SortOrder   = 1,
+                IsActive    = true,
+            },
+
+            // ── Accessories Promo Cards ───────────────────────────────────────
+            new()
+            {
+                SectionKey  = "accessories-promo",
+                ContentType = "feature-card",
+                SlugId      = "acc-promo-feature-card",
+                Title       = "Computer Accessories",
+                Subtitle    = "Upgrade your setup with premium keyboards, mice, hubs, and more.",
+                ButtonText  = "Shop Accessories",
+                ImageUrl    = "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop",
+                PriceLabel  = "Starting at",
+                PriceValue  = "$19.99",
+                SortOrder   = 1,
+                IsActive    = true,
+            },
+            new()
+            {
+                SectionKey  = "accessories-promo",
+                ContentType = "discount-card",
+                SlugId      = "acc-promo-discount-card",
+                Tag         = "Special Offer",
+                Headline    = "25% Off All Cables & Chargers",
+                Description = "Stock up on fast-charging cables, USB-C hubs, and wireless chargers at unbeatable prices.",
+                ButtonText  = "Grab the Deal",
+                SortOrder   = 2,
+                IsActive    = true,
+            },
+
+            // ── Laptop Promo ──────────────────────────────────────────────────
+            new()
+            {
+                SectionKey  = "laptop-promo",
+                ContentType = "laptop-promo",
+                SlugId      = "laptop-promo-dell-xps",
+                Title       = "Dell XPS 15 — Creator's Choice",
+                Subtitle    = "OLED display, Intel Core i9, 32 GB RAM. Built for those who demand more.",
+                CtaText     = "Shop Laptops",
+                ImageUrl    = "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=900&auto=format&fit=crop",
+                ImageAlt    = "Dell XPS 15 laptop open on desk with OLED display",
+                PriceBadge  = "From",
+                PriceValue  = "$1,399",
+                SortOrder   = 1,
+                IsActive    = true,
+            },
+        };
+
+        List<PromotionalSection> missingSections = sections
+            .Where(s => !existingSlugIds.Contains(s.SlugId))
+            .ToList();
+
+        if (missingSections.Count == 0) return;
+
+        await context.PromotionalSections.AddRangeAsync(missingSections);
         await context.SaveChangesAsync();
     }
 }

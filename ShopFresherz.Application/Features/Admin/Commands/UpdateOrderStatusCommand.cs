@@ -1,6 +1,7 @@
 using MediatR;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Application.Dtos.Admin;
+using ShopFresherz.Application.Features.Payments.Services;
 using ShopFresherz.Domain.Entities;
 using ShopFresherz.Domain.Enums;
 using ShopFresherz.Domain.Interfaces;
@@ -19,11 +20,16 @@ public sealed class UpdateOrderStatusCommandHandler
 {
     private readonly IUnitOfWork _uow;
     private readonly ISmsService _sms;
+    private readonly IOrderPaymentConfirmationService _paymentConfirmation;
 
-    public UpdateOrderStatusCommandHandler(IUnitOfWork uow, ISmsService sms)
+    public UpdateOrderStatusCommandHandler(
+        IUnitOfWork uow,
+        ISmsService sms,
+        IOrderPaymentConfirmationService paymentConfirmation)
     {
         _uow = uow;
         _sms = sms;
+        _paymentConfirmation = paymentConfirmation;
     }
 
     /// <inheritdoc />
@@ -38,6 +44,21 @@ public sealed class UpdateOrderStatusCommandHandler
         }
 
         OrderStatus newStatus = command.Request.NewStatus;
+
+        bool confirmsBankTransfer =
+            order.PaymentMethod == PaymentMethod.BankTransfer &&
+            order.PaymentStatus != PaymentStatus.Paid &&
+            newStatus is OrderStatus.Paid or OrderStatus.Processing;
+
+        if (confirmsBankTransfer)
+        {
+            return await _paymentConfirmation.CompleteAsync(
+                order,
+                order.GuestEmail,
+                newStatus,
+                cancellationToken);
+        }
+
         if (!IsLegalTransition(order.Status, newStatus))
         {
             return Error.Validation($"Cannot transition order from {order.Status} to {newStatus}.");
