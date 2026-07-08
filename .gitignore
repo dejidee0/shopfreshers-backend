@@ -19,6 +19,11 @@ publish_deploy/
 
 ## ASP.NET Core
 appsettings.Development.json
+appsettings.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.Development.json.example
+!appsettings.example.json
 
 ## Temporary files
 .tmp/
