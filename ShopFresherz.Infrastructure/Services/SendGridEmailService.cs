@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SendGrid;
 using SendGrid.Helpers.Mail;
+using ShopFresherz.Domain.Enums;
 using ShopFresherz.Domain.Interfaces.Services;
 
 namespace ShopFresherz.Infrastructure.Services;
@@ -41,6 +42,15 @@ public sealed class SendGridEmailService : IEmailService
     private readonly bool _isConfigured = true;
 
     /// <inheritdoc />
+    public async Task SendWelcomeAsync(string toEmail, string firstName, CancellationToken cancellationToken = default)
+    {
+        string subject = "Welcome to ShopFresherz! 🎉";
+        string body    = $"Hi {firstName},<br/><br/>Welcome to ShopFresherz — Nigeria's trusted destination for premium gadgets and electronics.<br/><br/>Start shopping at shopfresherz.com/store.";
+
+        await SendAsync(toEmail, firstName, subject, body, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task SendOtpAsync(string toEmail, string firstName, string otp, CancellationToken cancellationToken = default)
     {
         string subject = "Your ShopFresherz verification code";
@@ -50,10 +60,30 @@ public sealed class SendGridEmailService : IEmailService
     }
 
     /// <inheritdoc />
-    public async Task SendOrderConfirmationAsync(string toEmail, string firstName, string orderNumber, decimal total, CancellationToken cancellationToken = default)
+    public async Task SendOrderConfirmationAsync(
+        string toEmail,
+        string firstName,
+        string orderNumber,
+        decimal total,
+        string paymentMethod,
+        DeliveryMethod deliveryMethod,
+        DateTime? estimatedDelivery = null,
+        string? phone = null,
+        CancellationToken cancellationToken = default)
     {
         string subject = $"Order Confirmed — {orderNumber}";
-        string body    = $"Hi {firstName},<br/><br/>Your order <strong>{orderNumber}</strong> has been confirmed.<br/>Total charged: <strong>₦{total:N2}</strong>.<br/><br/>We'll send you another email when it ships. Thank you for shopping with ShopFresherz!";
+        string phoneLine = string.IsNullOrWhiteSpace(phone) ? string.Empty : $"<br/>Phone: <strong>{phone}</strong>.";
+        string deliveryLine = deliveryMethod switch
+        {
+            DeliveryMethod.Pickup  => "Ready for pickup in-store.",
+            DeliveryMethod.Express => estimatedDelivery.HasValue
+                ? $"Express delivery, 1-3 business days (by {estimatedDelivery.Value:MMM d, yyyy})."
+                : "Express delivery, 1-3 business days.",
+            _                      => estimatedDelivery.HasValue
+                ? $"Standard delivery, 3-5 business days (by {estimatedDelivery.Value:MMM d, yyyy})."
+                : "Standard delivery, 3-5 business days.",
+        };
+        string body    = $"Hi {firstName},<br/><br/>Your order <strong>{orderNumber}</strong> has been confirmed.<br/>Total charged: <strong>₦{total:N2}</strong>.<br/>Payment method: <strong>{paymentMethod}</strong>.<br/>{deliveryLine}{phoneLine}<br/><br/>We'll send you another email when it ships. Thank you for shopping with ShopFresherz!";
 
         await SendAsync(toEmail, firstName, subject, body, cancellationToken);
     }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Domain.Entities;
 using ShopFresherz.Domain.Enums;
@@ -95,11 +96,16 @@ public sealed class OrderPaymentConfirmationService : IOrderPaymentConfirmationS
         await _uow.SaveChangesAsync(cancellationToken);
 
         string recipientEmail = orderUser?.Email ?? customerEmail ?? order.GuestEmail ?? string.Empty;
+        string? phone = orderUser?.Phone ?? ExtractPhoneFromAddressJson(order.DeliveryAddressJson);
         await _email.SendOrderConfirmationAsync(
             recipientEmail,
             orderUser?.FirstName ?? "Customer",
             order.OrderNumber,
             order.Total,
+            order.PaymentMethod?.ToString() ?? "Card",
+            order.DeliveryMethod,
+            order.EstimatedDelivery,
+            phone,
             cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(orderUser?.Phone))
@@ -112,5 +118,21 @@ public sealed class OrderPaymentConfirmationService : IOrderPaymentConfirmationS
         }
 
         return Result<bool>.Success(true);
+    }
+
+    /// <summary>Extracts the "Phone" property from a checkout delivery-address JSON snapshot, if present.</summary>
+    private static string? ExtractPhoneFromAddressJson(string deliveryAddressJson)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(deliveryAddressJson);
+            return doc.RootElement.TryGetProperty("Phone", out JsonElement phone)
+                ? phone.GetString()
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

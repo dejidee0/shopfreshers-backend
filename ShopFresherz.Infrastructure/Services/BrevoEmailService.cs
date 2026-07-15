@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ShopFresherz.Domain.Enums;
 using ShopFresherz.Domain.Interfaces.Services;
 using ShopFresherz.Infrastructure.Configuration;
 
@@ -43,12 +44,14 @@ public sealed class BrevoEmailService : IEmailService
         string orderNumber,
         decimal total,
         string paymentMethod,
+        DeliveryMethod deliveryMethod,
+        DateTime? estimatedDelivery = null,
         string? phone = null,
         CancellationToken cancellationToken = default)
     {
         string subject = $"Order Confirmed — {orderNumber} 🎉";
         return SendAsync(toEmail, firstName, subject,
-            Wrap(subject, OrderConfirmationBody(firstName, orderNumber, total, paymentMethod, phone)),
+            Wrap(subject, OrderConfirmationBody(firstName, orderNumber, total, paymentMethod, deliveryMethod, estimatedDelivery, phone)),
             cancellationToken);
     }
 
@@ -340,7 +343,14 @@ public sealed class BrevoEmailService : IEmailService
         </p>
         """;
 
-    private static string OrderConfirmationBody(string firstName, string orderNumber, decimal total, string paymentMethod, string? phone)
+    private static string OrderConfirmationBody(
+        string firstName,
+        string orderNumber,
+        decimal total,
+        string paymentMethod,
+        DeliveryMethod deliveryMethod,
+        DateTime? estimatedDelivery,
+        string? phone)
     {
         string phoneRow = string.IsNullOrWhiteSpace(phone)
             ? string.Empty
@@ -352,6 +362,23 @@ public sealed class BrevoEmailService : IEmailService
                 </td>
               </tr>
               """;
+
+        (string deliveryEstimateLabel, string deliveryNextStepText) = deliveryMethod switch
+        {
+            DeliveryMethod.Pickup => (
+                "Ready for Pickup",
+                "🏬 We'll text you when your order is ready to collect in-store"),
+            DeliveryMethod.Express => (
+                estimatedDelivery.HasValue
+                    ? $"1-3 Business Days (by {estimatedDelivery.Value:MMM d, yyyy})"
+                    : "1-3 Business Days",
+                "🚚 Express delivery within 1-3 business days to your address"),
+            _ => (
+                estimatedDelivery.HasValue
+                    ? $"3-5 Business Days (by {estimatedDelivery.Value:MMM d, yyyy})"
+                    : "3-5 Business Days",
+                "🚚 Delivery within 3-5 business days to your address"),
+        };
 
         return $"""
         <div style="text-align:center;margin-bottom:32px;">
@@ -394,7 +421,7 @@ public sealed class BrevoEmailService : IEmailService
             <tr>
               <td style="color:#666;font-size:14px;padding:6px 0;">Estimated Delivery</td>
               <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
-                1-2 Business Days
+                {Encode(deliveryEstimateLabel)}
               </td>
             </tr>
           </table>
@@ -419,7 +446,7 @@ public sealed class BrevoEmailService : IEmailService
             </tr>
             <tr>
               <td style="padding:6px 0;color:#444;font-size:13px;line-height:1.6;">
-                🚚 Delivery within 1-2 business days to your address
+                {deliveryNextStepText}
               </td>
             </tr>
             <tr>

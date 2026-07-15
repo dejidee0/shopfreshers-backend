@@ -52,13 +52,34 @@ public sealed class InitiatePaymentCommandHandler
             return Error.Validation("At least one item is required to start checkout.");
         }
 
-        if (req.PaymentMethod is not (PaymentMethod.Card or PaymentMethod.BankTransfer))
+        if (req.PaymentMethod is not (PaymentMethod.Card or PaymentMethod.BankTransfer or PaymentMethod.PayOnDelivery))
         {
-            return Error.Validation("Payment method must be Card or BankTransfer.");
+            return Error.Validation("Payment method must be Card, BankTransfer, or PayOnDelivery.");
+        }
+
+        // Resolve customer details for the order + Flutterwave config.
+        string customerEmail;
+        string customerName;
+        string customerPhone;
+        if (command.UserId.HasValue)
+        {
+            User? user = await _uow.Users.GetByIdAsync(command.UserId.Value, cancellationToken);
+            customerEmail = user?.Email ?? req.GuestEmail ?? string.Empty;
+            customerName = user is not null
+                ? $"{user.FirstName} {user.LastName}".Trim()
+                : req.GuestName ?? "Guest";
+            customerPhone = user?.Phone ?? req.GuestPhone ?? string.Empty;
+        }
+        else
+        {
+            customerEmail = req.GuestEmail ?? string.Empty;
+            customerName = string.IsNullOrWhiteSpace(req.GuestName) ? "Guest" : req.GuestName.Trim();
+            customerPhone = req.GuestPhone ?? string.Empty;
         }
 
         // Resolve delivery address snapshot.
         string addressJson;
+        string deliveryState;
         if (req.AddressId.HasValue)
         {
             Address? addr = await _uow.Addresses.GetByIdAsync(req.AddressId.Value, cancellationToken);
@@ -68,19 +89,37 @@ public sealed class InitiatePaymentCommandHandler
                 return Error.Forbidden("The selected delivery address does not belong to this account.");
             }
 
+            deliveryState = addr.State;
             addressJson = JsonSerializer.Serialize(new
             {
                 addr.Label, addr.Line1, addr.Line2,
                 addr.City, addr.State, addr.PostalCode,
+                Phone = customerPhone,
             });
         }
         else if (req.InlineAddress is not null)
         {
-            addressJson = JsonSerializer.Serialize(req.InlineAddress);
+            deliveryState = req.InlineAddress.State;
+            addressJson = JsonSerializer.Serialize(new
+            {
+                req.InlineAddress.Label, req.InlineAddress.Line1, req.InlineAddress.Line2,
+                req.InlineAddress.City, req.InlineAddress.State, req.InlineAddress.PostalCode,
+                Phone = customerPhone,
+            });
         }
         else
         {
             return Error.Validation("A delivery address is required.");
+        }
+
+        // Pay on Delivery is only offered in Osun State, where the business is based and
+        // can physically collect cash. Every other state must pay online up front.
+        if (req.PaymentMethod == PaymentMethod.PayOnDelivery &&
+            !string.Equals(deliveryState.Trim(), "Osun", StringComparison.OrdinalIgnoreCase))
+        {
+            return Error.Validation(
+                "Pay on Delivery is only available for orders within Osun State. " +
+                "Please choose Card, Bank Transfer, or PAY NOW for delivery to other states.");
         }
 
         // Build order items, validate stock, and reserve.
@@ -165,9 +204,16 @@ public sealed class InitiatePaymentCommandHandler
 
         decimal deliveryFee = req.DeliveryMethod switch
         {
-            DeliveryMethod.Express => 3500m,
-            DeliveryMethod.Pickup => 0m,
-            _ => 1500m,
+            DeliveryMethod.Express  => 1500m,
+            DeliveryMethod.Pickup   => 0m,
+            DeliveryMethod.Standard => 3500m,
+            _                       => 3500m,
+        };
+        int deliveryDays = req.DeliveryMethod switch
+        {
+            DeliveryMethod.Express  => 3,
+            DeliveryMethod.Standard => 5,
+            _                       => 5,
         };
         decimal vatAmount = (itemsSubtotal - discount) * 0.075m;
         decimal total = itemsSubtotal - discount + deliveryFee + vatAmount;
@@ -179,26 +225,6 @@ public sealed class InitiatePaymentCommandHandler
             return Error.Validation("Order total mismatch. Please refresh and try again.");
         }
 
-        // Resolve customer details for the order + Flutterwave config.
-        string customerEmail;
-        string customerName;
-        string customerPhone;
-        if (command.UserId.HasValue)
-        {
-            User? user = await _uow.Users.GetByIdAsync(command.UserId.Value, cancellationToken);
-            customerEmail = user?.Email ?? req.GuestEmail ?? string.Empty;
-            customerName = user is not null
-                ? $"{user.FirstName} {user.LastName}".Trim()
-                : req.GuestName ?? "Guest";
-            customerPhone = user?.Phone ?? req.GuestPhone ?? string.Empty;
-        }
-        else
-        {
-            customerEmail = req.GuestEmail ?? string.Empty;
-            customerName = string.IsNullOrWhiteSpace(req.GuestName) ? "Guest" : req.GuestName.Trim();
-            customerPhone = req.GuestPhone ?? string.Empty;
-        }
-
         string orderNumber = await _uow.Orders.GenerateOrderNumberAsync(cancellationToken);
 
         Order order = new()
@@ -206,7 +232,9 @@ public sealed class InitiatePaymentCommandHandler
             OrderNumber = orderNumber,
             UserId = command.UserId,
             GuestEmail = command.UserId.HasValue ? null : req.GuestEmail,
-            Status = OrderStatus.Draft,
+            // PayOnDelivery has no gateway/popup step and no confirm-order follow-up call,
+            // so it goes straight to Pending rather than the two-step-checkout Draft state.
+            Status = req.PaymentMethod == PaymentMethod.PayOnDelivery ? OrderStatus.Pending : OrderStatus.Draft,
             PaymentStatus = PaymentStatus.Unpaid,
             PaymentMethod = req.PaymentMethod,
             Subtotal = itemsSubtotal,
@@ -217,7 +245,7 @@ public sealed class InitiatePaymentCommandHandler
             CouponId = coupon?.Id,
             DeliveryAddressJson = addressJson,
             DeliveryMethod = req.DeliveryMethod,
-            EstimatedDelivery = DateTime.UtcNow.AddDays(req.DeliveryMethod == DeliveryMethod.Express ? 2 : 5),
+            EstimatedDelivery = DateTime.UtcNow.AddDays(deliveryDays),
             Items = items,
         };
 
@@ -227,12 +255,24 @@ public sealed class InitiatePaymentCommandHandler
         await _uow.Orders.AddAsync(order, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
 
+        if (req.PaymentMethod == PaymentMethod.PayOnDelivery)
+        {
+            return Result<InitiatePaymentResponse>.Success(new InitiatePaymentResponse
+            {
+                PendingOrderId = order.Id,
+                OrderNumber = orderNumber,
+                PaymentMethod = nameof(PaymentMethod.PayOnDelivery),
+                Message = "Your order has been placed. Payment will be collected on delivery.",
+            });
+        }
+
         if (req.PaymentMethod == PaymentMethod.BankTransfer)
         {
             BankTransferDetails details = _bankTransferDetails.GetDetails();
             return Result<InitiatePaymentResponse>.Success(new InitiatePaymentResponse
             {
                 PendingOrderId = order.Id,
+                OrderNumber = orderNumber,
                 PaymentMethod = nameof(PaymentMethod.BankTransfer),
                 BankDetails = new CheckoutBankDetailsDto
                 {
@@ -246,14 +286,26 @@ public sealed class InitiatePaymentCommandHandler
             });
         }
 
+        PaymentInitResult? payResult = await _flutterwave.InitializeAsync(
+            customerEmail,
+            customerName,
+            customerPhone,
+            order.Id,
+            orderNumber,
+            total,
+            cancellationToken);
+
         return Result<InitiatePaymentResponse>.Success(new InitiatePaymentResponse
         {
             PendingOrderId = order.Id,
+            OrderNumber = orderNumber,
             PaymentMethod = nameof(PaymentMethod.Card),
+            PaymentLink = payResult?.AuthorisationUrl,
             FlutterwaveConfig = new FlutterwaveConfigDto
             {
                 PublicKey = _flutterwave.PublicKey,
                 TxRef = order.TxRef,
+                RedirectUrl = _flutterwave.CallbackUrl,
                 Amount = total,
                 Currency = "NGN",
                 Customer = new FlutterwaveCustomerDto
@@ -290,8 +342,8 @@ public sealed class InitiatePaymentCommandValidator : AbstractValidator<Initiate
             .IsInEnum().WithMessage("A valid delivery method is required.");
 
         RuleFor(x => x.Request.PaymentMethod)
-            .Must(m => m is PaymentMethod.Card or PaymentMethod.BankTransfer)
-            .WithMessage("Payment method must be Card or BankTransfer.");
+            .Must(m => m is PaymentMethod.Card or PaymentMethod.BankTransfer or PaymentMethod.PayOnDelivery)
+            .WithMessage("Payment method must be Card, BankTransfer, or PayOnDelivery.");
 
         RuleFor(x => x.Request.GuestEmail)
             .EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Request.GuestEmail));

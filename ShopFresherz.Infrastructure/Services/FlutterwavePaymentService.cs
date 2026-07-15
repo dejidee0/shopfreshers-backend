@@ -28,9 +28,14 @@ public sealed class FlutterwavePaymentService : IFlutterwavePaymentService
     /// <inheritdoc />
     public string PublicKey => _options.PublicKey;
 
+    /// <inheritdoc />
+    public string CallbackUrl => _options.CallbackUrl;
+
     /// <summary>Initialises a Flutterwave hosted payment and returns the payment link.</summary>
     public async Task<PaymentInitResult?> InitializeAsync(
         string email,
+        string name,
+        string phone,
         Guid orderId,
         string orderNumber,
         decimal totalNgn,
@@ -44,7 +49,7 @@ public sealed class FlutterwavePaymentService : IFlutterwavePaymentService
                 amount = totalNgn,
                 currency = "NGN",
                 redirect_url = _options.CallbackUrl,
-                customer = new { email },
+                customer = new { email, name, phonenumber = phone },
                 customizations = new
                 {
                     title = "ShopFresherz",

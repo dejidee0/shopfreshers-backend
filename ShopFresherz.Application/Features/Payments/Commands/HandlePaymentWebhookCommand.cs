@@ -73,10 +73,31 @@ public sealed class HandlePaymentWebhookCommandHandler
             return Result<bool>.Success(true);
         }
 
-        return await _paymentConfirmation.CompleteAsync(
+        // Atomically claim the order (Unpaid -> Verifying) so a concurrent confirm-order call
+        // for the same order cannot also process this payment.
+        int claimed = await _uow.Orders.TryClaimForVerificationAsync(order.Id, cancellationToken);
+        if (claimed == 0)
+        {
+            // Already claimed or completed by confirm-order (or a prior webhook delivery).
+            return Result<bool>.Success(true);
+        }
+
+        order.PaymentStatus = PaymentStatus.Verifying;
+
+        Result<bool> completion = await _paymentConfirmation.CompleteAsync(
             order,
             command.CustomerEmail,
             OrderStatus.Processing,
             cancellationToken);
+
+        if (!completion.IsSuccess)
+        {
+            // Release the claim so a retry (webhook redelivery or confirm-order) isn't stuck.
+            order.PaymentStatus = PaymentStatus.Unpaid;
+            _uow.Orders.Update(order);
+            await _uow.SaveChangesAsync(cancellationToken);
+        }
+
+        return completion;
     }
 }

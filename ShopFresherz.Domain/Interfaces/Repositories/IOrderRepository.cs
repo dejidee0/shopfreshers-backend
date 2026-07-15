@@ -47,11 +47,22 @@ public interface IOrderRepository
     /// <summary>Returns all orders matching a given status (used by admin and background jobs).</summary>
     Task<IReadOnlyList<Order>> GetByStatusAsync(OrderStatus status, CancellationToken cancellationToken = default);
 
-    /// <summary>Returns awaiting-payment orders older than the supplied cutoff.</summary>
+    /// <summary>
+    /// Returns orders older than the supplied cutoff that are still awaiting payment
+    /// (either the legacy hosted-redirect <see cref="OrderStatus.AwaitingPayment"/> state
+    /// or the two-step inline-popup <see cref="OrderStatus.Draft"/> state).
+    /// </summary>
     Task<IReadOnlyList<Order>> GetExpiredAwaitingPaymentAsync(DateTime cutoff, CancellationToken cancellationToken = default);
 
     /// <summary>Generates the next sequential order number in SFZ-{YYYY}-{NNNNN} format.</summary>
     Task<string> GenerateOrderNumberAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically transitions the order's <see cref="PaymentStatus"/> from Unpaid to Verifying,
+    /// via a single conditional UPDATE. Returns the number of rows affected (0 or 1): 0 means
+    /// another request has already claimed or completed this order's payment confirmation.
+    /// </summary>
+    Task<int> TryClaimForVerificationAsync(Guid orderId, CancellationToken cancellationToken = default);
 
     /// <summary>Adds a new order.</summary>
     Task AddAsync(Order order, CancellationToken cancellationToken = default);

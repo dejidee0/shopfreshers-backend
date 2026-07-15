@@ -58,7 +58,7 @@ public sealed class ConfirmOrderCommandHandler
             return Error.Validation("Payment verification failed.");
         }
 
-        // Idempotency: a non-Draft order has already been processed.
+        // Idempotency: a non-Draft order has already been processed (or is being processed).
         if (order.Status != OrderStatus.Draft)
         {
             if (order.PaymentStatus == PaymentStatus.Paid)
@@ -79,6 +79,25 @@ public sealed class ConfirmOrderCommandHandler
             return Error.Validation("Payment was not successful.");
         }
 
+        // Atomically claim the order for verification (Unpaid -> Verifying) so a concurrent
+        // confirm-order call or webhook delivery for the same order cannot also process it.
+        int claimed = await _uow.Orders.TryClaimForVerificationAsync(order.Id, cancellationToken);
+        if (claimed == 0)
+        {
+            Order? current = await _uow.Orders.GetByIdAsync(order.Id, cancellationToken);
+            if (current?.PaymentStatus == PaymentStatus.Paid)
+            {
+                return Result<ConfirmOrderResponse>.Success(new ConfirmOrderResponse
+                {
+                    OrderNumber = current.OrderNumber,
+                });
+            }
+
+            return Error.Validation("This order is already being confirmed. Please wait a moment and refresh.");
+        }
+
+        order.PaymentStatus = PaymentStatus.Verifying;
+
         // Authoritative server-side verification against Flutterwave.
         FlutterwaveVerificationResult? verification =
             await _flutterwave.VerifyAsync(req.TransactionId, cancellationToken);
@@ -92,6 +111,10 @@ public sealed class ConfirmOrderCommandHandler
 
         if (!verified)
         {
+            // Release the claim so a legitimate retry can attempt verification again.
+            order.PaymentStatus = PaymentStatus.Unpaid;
+            _uow.Orders.Update(order);
+            await _uow.SaveChangesAsync(cancellationToken);
             return Error.Validation("Payment verification failed.");
         }
 
@@ -103,6 +126,10 @@ public sealed class ConfirmOrderCommandHandler
 
         if (!completion.IsSuccess)
         {
+            // Release the claim so a legitimate retry isn't permanently stuck at Verifying.
+            order.PaymentStatus = PaymentStatus.Unpaid;
+            _uow.Orders.Update(order);
+            await _uow.SaveChangesAsync(cancellationToken);
             return completion.Error;
         }
 

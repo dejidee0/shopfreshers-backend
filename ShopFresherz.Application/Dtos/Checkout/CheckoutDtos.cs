@@ -56,11 +56,15 @@ public sealed class InitiatePaymentRequest
 /// <summary>Response payload for <c>POST /api/v1/checkout/initiate-payment</c>.</summary>
 public sealed class InitiatePaymentResponse
 {
-    /// <summary>Gets or sets the created Draft order ID the frontend echoes back on confirmation.</summary>
+    /// <summary>Gets or sets the created order ID the frontend echoes back on confirmation.</summary>
     [JsonPropertyName("pendingOrderId")]
     public Guid PendingOrderId { get; set; }
 
-    /// <summary>Gets or sets the resolved payment method ("Card" | "BankTransfer").</summary>
+    /// <summary>Gets or sets the human-readable order number (e.g., SFZ-2026-00001).</summary>
+    [JsonPropertyName("orderNumber")]
+    public string OrderNumber { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the resolved payment method ("Card" | "BankTransfer" | "PayOnDelivery").</summary>
     [JsonPropertyName("paymentMethod")]
     public string PaymentMethod { get; set; } = string.Empty;
 
@@ -73,6 +77,16 @@ public sealed class InitiatePaymentResponse
     [JsonPropertyName("flutterwaveConfig")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public FlutterwaveConfigDto? FlutterwaveConfig { get; set; }
+
+    /// <summary>Gets or sets the Flutterwave hosted checkout URL to redirect the customer to (Card only).</summary>
+    [JsonPropertyName("paymentLink")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PaymentLink { get; set; }
+
+    /// <summary>Gets or sets an informational message for methods with no further client action (PayOnDelivery).</summary>
+    [JsonPropertyName("message")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Message { get; set; }
 }
 
 /// <summary>Manual bank-transfer details returned for the BankTransfer payment method.</summary>
@@ -102,6 +116,9 @@ public sealed class FlutterwaveConfigDto
 
     [JsonPropertyName("tx_ref")]
     public string TxRef { get; set; } = string.Empty;
+
+    [JsonPropertyName("redirect_url")]
+    public string RedirectUrl { get; set; } = string.Empty;
 
     [JsonPropertyName("amount")]
     public decimal Amount { get; set; }

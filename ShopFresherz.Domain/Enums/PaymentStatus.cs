@@ -10,5 +10,11 @@ public enum PaymentStatus
     Paid = 1,
 
     /// <summary>Payment has been refunded to customer.</summary>
-    Refunded = 2
+    Refunded = 2,
+
+    /// <summary>
+    /// Confirmation claimed by confirm-order or the webhook and is being verified.
+    /// Acts as an atomic lock so a concurrent call cannot also process the same payment.
+    /// </summary>
+    Verifying = 3
 }

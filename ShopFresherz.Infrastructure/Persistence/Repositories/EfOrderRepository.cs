@@ -164,8 +164,18 @@ internal sealed class EfOrderRepository : IOrderRepository
     {
         return await _context.Orders
             .Include(o => o.Items)
-            .Where(o => o.Status == OrderStatus.AwaitingPayment && o.CreatedAt < cutoff)
+            .Where(o =>
+                (o.Status == OrderStatus.AwaitingPayment || o.Status == OrderStatus.Draft) &&
+                o.CreatedAt < cutoff)
             .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> TryClaimForVerificationAsync(Guid orderId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE Orders SET PaymentStatus = 'Verifying' WHERE Id = {orderId} AND PaymentStatus = 'Unpaid'",
+            cancellationToken);
     }
 
     /// <inheritdoc />

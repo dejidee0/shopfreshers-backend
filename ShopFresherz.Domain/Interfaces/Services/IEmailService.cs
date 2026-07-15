@@ -1,3 +1,5 @@
+using ShopFresherz.Domain.Enums;
+
 namespace ShopFresherz.Domain.Interfaces.Services;
 
 /// <summary>
@@ -6,11 +8,23 @@ namespace ShopFresherz.Domain.Interfaces.Services;
 /// </summary>
 public interface IEmailService
 {
+    /// <summary>Sends a welcome email after successful registration.</summary>
+    Task SendWelcomeAsync(string toEmail, string firstName, CancellationToken cancellationToken = default);
+
     /// <summary>Sends a 6-digit OTP for registration or password reset.</summary>
     Task SendOtpAsync(string toEmail, string firstName, string otp, CancellationToken cancellationToken = default);
 
     /// <summary>Sends an order placed confirmation email with order summary.</summary>
-    Task SendOrderConfirmationAsync(string toEmail, string firstName, string orderNumber, decimal total, CancellationToken cancellationToken = default);
+    Task SendOrderConfirmationAsync(
+        string toEmail,
+        string firstName,
+        string orderNumber,
+        decimal total,
+        string paymentMethod,
+        DeliveryMethod deliveryMethod,
+        DateTime? estimatedDelivery = null,
+        string? phone = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Sends an order shipped notification with tracking number.</summary>
     Task SendOrderShippedAsync(string toEmail, string firstName, string orderNumber, string trackingNumber, CancellationToken cancellationToken = default);

@@ -6,7 +6,10 @@ using ShopFresherz.Domain.Interfaces;
 
 namespace ShopFresherz.Infrastructure.Jobs;
 
-/// <summary>Releases stock for awaiting-payment orders older than 30 minutes.</summary>
+/// <summary>
+/// Releases reserved stock for orders older than 30 minutes that are still awaiting payment,
+/// including abandoned two-step inline-popup Draft orders that never call confirm-order.
+/// </summary>
 public sealed class StockReservationExpiryJob
 {
     private readonly IServiceScopeFactory _scopeFactory;

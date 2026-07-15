@@ -6,8 +6,13 @@ public interface IFlutterwavePaymentService
     /// <summary>Gets the configured Flutterwave public key, returned to the frontend for the inline popup.</summary>
     string PublicKey { get; }
 
+    /// <summary>Gets the configured post-payment callback URL for the frontend to fall back to.</summary>
+    string CallbackUrl { get; }
+
     Task<PaymentInitResult?> InitializeAsync(
         string email,
+        string name,
+        string phone,
         Guid orderId,
         string orderNumber,
         decimal totalNgn,

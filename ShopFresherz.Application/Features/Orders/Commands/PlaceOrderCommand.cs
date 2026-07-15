@@ -66,10 +66,12 @@ public sealed class PlaceOrderCommandHandler
 
         // Resolve delivery address JSON snapshot.
         string addressJson;
+        string deliveryState;
         if (req.AddressId.HasValue)
         {
             Address? addr = await _uow.Addresses.GetByIdAsync(req.AddressId.Value, cancellationToken);
             if (addr is null) return Error.NotFound("Delivery address");
+            deliveryState = addr.State;
             addressJson = JsonSerializer.Serialize(new
             {
                 addr.Label, addr.Line1, addr.Line2,
@@ -78,11 +80,22 @@ public sealed class PlaceOrderCommandHandler
         }
         else if (req.InlineAddress is not null)
         {
+            deliveryState = req.InlineAddress.State;
             addressJson = JsonSerializer.Serialize(req.InlineAddress);
         }
         else
         {
             return Error.Validation("A delivery address is required.");
+        }
+
+        // Pay on Delivery is only offered in Osun State, where the business is based and
+        // can physically collect cash. Every other state must pay online up front.
+        if (req.PaymentMethod == PaymentMethod.PayOnDelivery &&
+            !string.Equals(deliveryState.Trim(), "Osun", StringComparison.OrdinalIgnoreCase))
+        {
+            return Error.Validation(
+                "Pay on Delivery is only available for orders within Osun State. " +
+                "Please choose Card, Bank Transfer, or PAY NOW for delivery to other states.");
         }
 
         // Build order items + reserve stock.
@@ -164,9 +177,16 @@ public sealed class PlaceOrderCommandHandler
 
         decimal deliveryFee = req.DeliveryMethod switch
         {
-            DeliveryMethod.Express => 3500m,
-            DeliveryMethod.Pickup  => 0m,
-            _                      => 1500m,
+            DeliveryMethod.Express  => 1500m,
+            DeliveryMethod.Pickup   => 0m,
+            DeliveryMethod.Standard => 3500m,
+            _                       => 3500m,
+        };
+        int deliveryDays = req.DeliveryMethod switch
+        {
+            DeliveryMethod.Express  => 3,
+            DeliveryMethod.Standard => 5,
+            _                       => 5,
         };
         decimal vatAmount   = (itemsSubtotal - discount) * 0.075m;
         decimal total       = itemsSubtotal - discount + deliveryFee + vatAmount;
@@ -189,7 +209,7 @@ public sealed class PlaceOrderCommandHandler
             CouponId            = coupon?.Id,
             DeliveryAddressJson = addressJson,
             DeliveryMethod      = req.DeliveryMethod,
-            EstimatedDelivery   = DateTime.UtcNow.AddDays(req.DeliveryMethod == DeliveryMethod.Express ? 2 : 5),
+            EstimatedDelivery   = DateTime.UtcNow.AddDays(deliveryDays),
             Notes               = req.Notes,
             Items               = items,
         };
@@ -228,13 +248,20 @@ public sealed class PlaceOrderCommandHandler
         }
         else if (req.PaymentMethod is PaymentMethod.Card or PaymentMethod.USSD)
         {
-            string recipientEmail = command.UserId.HasValue
-                ? (await _uow.Users.GetByIdAsync(command.UserId.Value, cancellationToken))?.Email ?? req.GuestEmail ?? string.Empty
-                : req.GuestEmail ?? string.Empty;
+            User? recipientUser = command.UserId.HasValue
+                ? await _uow.Users.GetByIdAsync(command.UserId.Value, cancellationToken)
+                : null;
+            string recipientEmail = recipientUser?.Email ?? req.GuestEmail ?? string.Empty;
+            string recipientName = recipientUser is not null
+                ? $"{recipientUser.FirstName} {recipientUser.LastName}".Trim()
+                : "Guest";
+            string recipientPhone = recipientUser?.Phone ?? string.Empty;
 
             Domain.Interfaces.Services.PaymentInitResult? payResult =
                 await _flutterwavePayment.InitializeAsync(
                     recipientEmail,
+                    recipientName,
+                    recipientPhone,
                     order.Id,
                     orderNumber,
                     total,
@@ -258,7 +285,10 @@ public sealed class PlaceOrderCommandHandler
             "Customer",
             orderNumber,
             total,
-            CancellationToken.None);
+            req.PaymentMethod.ToString(),
+            order.DeliveryMethod,
+            order.EstimatedDelivery,
+            cancellationToken: CancellationToken.None);
 
         return Result<CreateOrderResponse>.Success(new CreateOrderResponse
         {
