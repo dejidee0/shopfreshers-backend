@@ -156,16 +156,91 @@ public static class DataSeeder
         new() { Id = new("7D2F9979-8BC4-41C4-B847-1FF3130B6230"), Name = "UGREEN",       Slug = "ugreen",       IsActive = true },
         new() { Id = new("4B86C0FD-BD02-463D-9F1F-D47982528AA3"), Name = "Cooler Master",Slug = "cooler-master",IsActive = true },
         new() { Id = new("D0EF5DF2-B0AA-4984-8227-47C4E3D3214F"), Name = "GTRacing",     Slug = "gtracing",     IsActive = true },
+
+        // ── Full brand catalogue expansion (accessories, gaming, cameras, storage) ──
+        new() { Name = "Airsky",              Slug = "airsky",              IsActive = true },
+        new() { Name = "Airtel",              Slug = "airtel",              IsActive = true },
+        new() { Name = "AKZ",                 Slug = "akz",                 IsActive = true },
+        new() { Name = "Amazon",              Slug = "amazon",              IsActive = true },
+        new() { Name = "Anspo",               Slug = "anspo",               IsActive = true },
+        new() { Name = "Beats",               Slug = "beats",               IsActive = true },
+        new() { Name = "Boya",                Slug = "boya",                IsActive = true },
+        new() { Name = "Crossfire",           Slug = "crossfire",           IsActive = true },
+        new() { Name = "Digirich",            Slug = "digirich",            IsActive = true },
+        new() { Name = "DM",                  Slug = "dm",                  IsActive = true },
+        new() { Name = "Earldom",             Slug = "earldom",             IsActive = true },
+        new() { Name = "FeiyuTech",           Slug = "feiyutech",           IsActive = true },
+        new() { Name = "Hiksemi",             Slug = "hiksemi",             IsActive = true },
+        new() { Name = "Jabra",               Slug = "jabra",               IsActive = true },
+        new() { Name = "Koleer",              Slug = "koleer",              IsActive = true },
+        new() { Name = "LDNIO",               Slug = "ldnio",               IsActive = true },
+        new() { Name = "Maono",               Slug = "maono",               IsActive = true },
+        new() { Name = "Merak One",           Slug = "merak-one",           IsActive = true },
+        new() { Name = "MTN",                 Slug = "mtn",                 IsActive = true },
+        new() { Name = "New Age",             Slug = "new-age",             IsActive = true },
+        new() { Name = "Norton",              Slug = "norton",              IsActive = true },
+        new() { Name = "Onten",               Slug = "onten",               IsActive = true },
+        new() { Name = "Plantronics (Poly)",  Slug = "plantronics-poly",    IsActive = true },
+        new() { Name = "PlayStation",         Slug = "playstation",         IsActive = true },
+        new() { Name = "QLT",                 Slug = "qlt",                 IsActive = true },
+        new() { Name = "Quick Heal",          Slug = "quick-heal",          IsActive = true },
+        new() { Name = "Redmi",               Slug = "redmi",               IsActive = true },
+        new() { Name = "REMAX",               Slug = "remax",               IsActive = true },
+        new() { Name = "Roku",                Slug = "roku",                IsActive = true },
+        new() { Name = "SanDisk",             Slug = "sandisk",             IsActive = true },
+        new() { Name = "Seagate",             Slug = "seagate",             IsActive = true },
+        new() { Name = "Soundcore (Anker)",   Slug = "soundcore-anker",     IsActive = true },
+        new() { Name = "TP-Link",             Slug = "tp-link",             IsActive = true },
+        new() { Name = "Verbatim",            Slug = "verbatim",            IsActive = true },
+        new() { Name = "WD (Western Digital)",Slug = "wd-western-digital",  IsActive = true },
+        new() { Name = "Winpossee",           Slug = "winpossee",           IsActive = true },
+        new() { Name = "Wmark",               Slug = "wmark",               IsActive = true },
+        new() { Name = "Yoobao",              Slug = "yoobao",              IsActive = true },
+        new() { Name = "Zealot",              Slug = "zealot",              IsActive = true },
+        new() { Name = "Zoom",                Slug = "zoom",                IsActive = true },
+        new() { Name = "Baseus",              Slug = "baseus",              IsActive = true },
+        new() { Name = "Belkin",              Slug = "belkin",              IsActive = true },
+        new() { Name = "Mcdodo",              Slug = "mcdodo",              IsActive = true },
+        new() { Name = "JOYROOM",             Slug = "joyroom",             IsActive = true },
+        new() { Name = "Hoco",                Slug = "hoco",                IsActive = true },
+        new() { Name = "Green Lion",          Slug = "green-lion",          IsActive = true },
+        new() { Name = "WIWU",                Slug = "wiwu",                IsActive = true },
+        new() { Name = "ESR",                 Slug = "esr",                 IsActive = true },
+        new() { Name = "Ringke",              Slug = "ringke",              IsActive = true },
+        new() { Name = "Torras",              Slug = "torras",              IsActive = true },
+        new() { Name = "Caseology",           Slug = "caseology",           IsActive = true },
+        new() { Name = "Xbox",                Slug = "xbox",                IsActive = true },
+        new() { Name = "SteelSeries",         Slug = "steelseries",         IsActive = true },
+        new() { Name = "GameSir",             Slug = "gamesir",             IsActive = true },
+        new() { Name = "8BitDo",              Slug = "8bitdo",              IsActive = true },
+        new() { Name = "Turtle Beach",        Slug = "turtle-beach",        IsActive = true },
+        new() { Name = "Huawei",              Slug = "huawei",              IsActive = true },
+        new() { Name = "Nothing",             Slug = "nothing",             IsActive = true },
+        new() { Name = "CMF by Nothing",      Slug = "cmf-by-nothing",      IsActive = true },
+        new() { Name = "Amazfit",             Slug = "amazfit",             IsActive = true },
+        new() { Name = "Google",              Slug = "google",              IsActive = true },
+        new() { Name = "DJI",                 Slug = "dji",                 IsActive = true },
+        new() { Name = "Insta360",            Slug = "insta360",            IsActive = true },
+        new() { Name = "GoPro",               Slug = "gopro",               IsActive = true },
+        new() { Name = "Ulanzi",              Slug = "ulanzi",              IsActive = true },
+        new() { Name = "Rode",                Slug = "rode",                IsActive = true },
+        new() { Name = "Elgato",              Slug = "elgato",              IsActive = true },
+        new() { Name = "Kingston",            Slug = "kingston",            IsActive = true },
+        new() { Name = "Lexar",               Slug = "lexar",               IsActive = true },
+        new() { Name = "Crucial",             Slug = "crucial",             IsActive = true },
+        new() { Name = "Samsung Storage",     Slug = "samsung-storage",     IsActive = true },
     };
 
     private static async Task SeedBrandsAsync(ShopFresherzDbContext context)
     {
         HashSet<string> existing = (await context.Brands
-            .Select(b => b.Slug)
-            .ToListAsync()).ToHashSet();
+            .Select(b => b.Name)
+            .ToListAsync())
+            .Select(n => n.Trim().ToLowerInvariant())
+            .ToHashSet();
 
         List<Brand> missing = BrandsToSeed
-            .Where(b => !existing.Contains(b.Slug))
+            .Where(b => !existing.Contains(b.Name.Trim().ToLowerInvariant()))
             .ToList();
 
         if (missing.Count == 0) return;

@@ -27,44 +27,49 @@ public sealed class BrevoEmailService : IEmailService
         _logger = logger;
     }
 
-    public Task SendOtpAsync(string toEmail, string firstName, string otp, CancellationToken cancellationToken = default) =>
-        SendAsync(toEmail, firstName, "Verify your ShopFresherz email",
-            BrandedBody("Verify your email",
-                $"<p>Hi {Encode(firstName)},</p><p>Use the verification code below to confirm your ShopFresherz email.</p>{OtpBlock(otp)}<p>This code expires in 10 minutes.</p>"),
+    public Task SendWelcomeAsync(string toEmail, string firstName, CancellationToken cancellationToken = default) =>
+        SendAsync(toEmail, firstName, "Welcome to ShopFresherz! 🎉",
+            Wrap("Welcome to ShopFresherz! 🎉", WelcomeBody(firstName)),
             cancellationToken);
 
-    public Task SendOrderConfirmationAsync(string toEmail, string firstName, string orderNumber, decimal total, CancellationToken cancellationToken = default) =>
-        SendAsync(toEmail, firstName, $"Order Confirmed - {orderNumber}",
-            BrandedBody("Order confirmed",
-                $"<p>Hi {Encode(firstName)},</p><p>Thank you for shopping with ShopFresherz.</p>" +
-                $"<p>Order: <strong>{Encode(orderNumber)}</strong><br/>Total: <strong>NGN {total:N2}</strong></p>" +
-                "<p>We will notify you when your order status changes.</p>"),
+    public Task SendOtpAsync(string toEmail, string firstName, string otp, CancellationToken cancellationToken = default) =>
+        SendAsync(toEmail, firstName, "Verify your ShopFresherz account",
+            Wrap("Verify your ShopFresherz account", VerifyEmailBody(firstName, otp)),
             cancellationToken);
+
+    public Task SendOrderConfirmationAsync(
+        string toEmail,
+        string firstName,
+        string orderNumber,
+        decimal total,
+        string paymentMethod,
+        string? phone = null,
+        CancellationToken cancellationToken = default)
+    {
+        string subject = $"Order Confirmed — {orderNumber} 🎉";
+        return SendAsync(toEmail, firstName, subject,
+            Wrap(subject, OrderConfirmationBody(firstName, orderNumber, total, paymentMethod, phone)),
+            cancellationToken);
+    }
 
     public Task SendOrderShippedAsync(string toEmail, string firstName, string orderNumber, string trackingNumber, CancellationToken cancellationToken = default) =>
         SendAsync(toEmail, firstName, $"Your order {orderNumber} has shipped",
-            BrandedBody("Your order is on its way",
-                $"<p>Hi {Encode(firstName)},</p><p>Order <strong>{Encode(orderNumber)}</strong> has shipped.</p>" +
-                $"<p>Tracking number: <strong>{Encode(trackingNumber)}</strong></p>"),
+            Wrap($"Your order {orderNumber} has shipped", OrderShippedBody(firstName, orderNumber, trackingNumber)),
             cancellationToken);
 
     public Task SendPasswordResetAsync(string toEmail, string firstName, string otp, CancellationToken cancellationToken = default) =>
         SendAsync(toEmail, firstName, "Reset your ShopFresherz password",
-            BrandedBody("Reset your password",
-                $"<p>Hi {Encode(firstName)},</p><p>Use this six-digit code to reset your password.</p>{OtpBlock(otp)}" +
-                "<p>This code expires in 15 minutes. If you did not request it, you can ignore this email.</p>"),
+            Wrap("Reset your ShopFresherz password", PasswordResetBody(firstName, otp)),
             cancellationToken);
 
     public Task SendBackInStockAsync(string toEmail, string firstName, string productName, string productSlug, CancellationToken cancellationToken = default) =>
         SendAsync(toEmail, firstName, $"{productName} is back in stock",
-            BrandedBody("Back in stock",
-                $"<p>Hi {Encode(firstName)},</p><p><strong>{Encode(productName)}</strong> is available again.</p>" +
-                $"<p><a href=\"https://shopfresherz.com/products/{Uri.EscapeDataString(productSlug)}\">View product</a></p>"),
+            Wrap($"{productName} is back in stock", BackInStockBody(firstName, productName, productSlug)),
             cancellationToken);
 
     public Task SendTemplatedAsync(string toEmail, string templateKey, object templateData, CancellationToken cancellationToken = default) =>
         SendAsync(toEmail, string.Empty, templateKey,
-            BrandedBody(Encode(templateKey), $"<pre>{Encode(JsonSerializer.Serialize(templateData))}</pre>"),
+            Wrap(templateKey, TemplatedBody(templateKey, templateData)),
             cancellationToken);
 
     private async Task SendAsync(string toEmail, string toName, string subject, string htmlBody, CancellationToken cancellationToken)
@@ -112,13 +117,396 @@ public sealed class BrevoEmailService : IEmailService
         }
     }
 
-    private static string BrandedBody(string heading, string content) =>
-        "<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#17202a\">" +
-        "<div style=\"background:#16794b;color:white;padding:20px;font-size:22px;font-weight:bold\">ShopFresherz</div>" +
-        $"<div style=\"padding:24px;border:1px solid #e5e7eb\"><h2>{heading}</h2>{content}</div></div>";
+    /// <summary>Wraps body content in the shared branded header/footer shell.</summary>
+    private static string Wrap(string subject, string bodyContent) =>
+        $"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>{Encode(subject)}</title>
+        </head>
+        <body style="margin:0;padding:0;background-color:#F5F2ED;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F2ED;padding:40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
-    private static string OtpBlock(string otp) =>
-        $"<div style=\"font-size:30px;font-weight:bold;letter-spacing:8px;padding:16px 0\">{Encode(otp)}</div>";
+                  <!-- HEADER -->
+                  <tr>
+                    <td style="background:linear-gradient(135deg,#1A1A2E 0%,#242436 100%);border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+                      <img src="https://res.cloudinary.com/dtcpnqmi9/image/upload/v1782151604/ShopFreshersV2LogoOrange_mvnyvo.png"
+                           alt="ShopFresherz" width="48" height="48"
+                           style="border-radius:10px;margin-bottom:12px;display:block;margin:0 auto 12px;">
+                      <h1 style="margin:0;color:#FFFFFF;font-size:22px;font-weight:700;letter-spacing:-0.5px;">
+                        ShopFresherz
+                      </h1>
+                      <p style="margin:4px 0 0;color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;">
+                        GADGET STORE
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- ORANGE ACCENT BAR -->
+                  <tr>
+                    <td style="background:linear-gradient(90deg,#F97316,#EA580C);height:3px;"></td>
+                  </tr>
+
+                  <!-- BODY -->
+                  <tr>
+                    <td style="background:#FFFFFF;padding:40px;border-radius:0 0 16px 16px;">
+                      {bodyContent}
+                    </td>
+                  </tr>
+
+                  <!-- FOOTER -->
+                  <tr>
+                    <td style="padding:24px 0;text-align:center;">
+                      <p style="margin:0 0 8px;color:#888;font-size:12px;">
+                        © 2026 ShopFresherz — Fresherz Gadgets Hub Ltd
+                      </p>
+                      <p style="margin:0 0 8px;color:#888;font-size:12px;">
+                        📞 +234 907 530 8722 ·
+                        <a href="https://shopfresherz.com" style="color:#F97316;text-decoration:none;">
+                          shopfresherz.com
+                        </a>
+                      </p>
+                      <p style="margin:0;color:#AAA;font-size:11px;">
+                        If you did not request this email, please ignore it.
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """;
+
+    private static string WelcomeBody(string firstName) =>
+        $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="width:64px;height:64px;background:#FFF3E0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:28px;">🎉</span>
+          </div>
+          <h2 style="margin:0 0 8px;color:#111111;font-size:26px;font-weight:800;letter-spacing:-0.5px;">
+            Welcome, {Encode(firstName)}!
+          </h2>
+          <p style="margin:0;color:#666;font-size:15px;line-height:1.6;">
+            You're now part of the ShopFresherz family.
+          </p>
+        </div>
+
+        <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 24px;">
+          We're Nigeria's most trusted destination for premium gadgets and electronics.
+          Get ready to discover the latest iPhones, laptops, gaming consoles,
+          and accessories at the best prices.
+        </p>
+
+        <!-- FEATURE BOXES -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+          <tr>
+            <td width="33%" style="padding:0 6px 0 0;vertical-align:top;">
+              <div style="background:#FFF8F3;border:1px solid #FED7AA;border-radius:12px;padding:16px;text-align:center;">
+                <div style="font-size:24px;margin-bottom:8px;">🚀</div>
+                <p style="margin:0;color:#111;font-size:13px;font-weight:600;">Fast Delivery</p>
+                <p style="margin:4px 0 0;color:#888;font-size:11px;">Within Lagos 24hrs</p>
+              </div>
+            </td>
+            <td width="33%" style="padding:0 3px;vertical-align:top;">
+              <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:16px;text-align:center;">
+                <div style="font-size:24px;margin-bottom:8px;">✅</div>
+                <p style="margin:0;color:#111;font-size:13px;font-weight:600;">100% Authentic</p>
+                <p style="margin:4px 0 0;color:#888;font-size:11px;">No fakes, ever</p>
+              </div>
+            </td>
+            <td width="33%" style="padding:0 0 0 6px;vertical-align:top;">
+              <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:16px;text-align:center;">
+                <div style="font-size:24px;margin-bottom:8px;">🔒</div>
+                <p style="margin:0;color:#111;font-size:13px;font-weight:600;">Secure Payment</p>
+                <p style="margin:4px 0 0;color:#888;font-size:11px;">Via Flutterwave</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- CTA BUTTON -->
+        <div style="text-align:center;margin:0 0 24px;">
+          <a href="https://shopfresherz.com/store"
+             style="display:inline-block;background:linear-gradient(135deg,#F97316,#EA580C);color:#FFFFFF;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px;box-shadow:0 4px 15px rgba(249,115,22,0.3);">
+            Start Shopping →
+          </a>
+        </div>
+
+        <p style="color:#888;font-size:13px;text-align:center;margin:0;">
+          Need help? Chat with us on
+          <a href="https://wa.me/2349075308722" style="color:#F97316;text-decoration:none;font-weight:600;">
+            WhatsApp
+          </a>
+        </p>
+        """;
+
+    private static string VerifyEmailBody(string firstName, string otp) =>
+        $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:28px;">✉️</span>
+          </div>
+          <h2 style="margin:0 0 8px;color:#111111;font-size:24px;font-weight:800;">
+            Verify Your Email
+          </h2>
+          <p style="margin:0;color:#666;font-size:15px;">
+            Enter the code below to verify your account
+          </p>
+        </div>
+
+        <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:center;">
+          Hi {Encode(firstName)}, use this verification code to complete
+          your ShopFresherz account setup:
+        </p>
+
+        <!-- OTP BOX -->
+        <div style="background:linear-gradient(135deg,#FFF8F3,#FFF3E0);border:2px solid #FED7AA;border-radius:16px;padding:32px;text-align:center;margin:0 0 24px;">
+          <p style="margin:0 0 8px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;">
+            Your verification code
+          </p>
+          <div style="font-size:48px;font-weight:900;color:#F97316;letter-spacing:12px;line-height:1;margin:8px 0;">
+            {Encode(otp)}
+          </div>
+          <p style="margin:12px 0 0;color:#888;font-size:13px;">
+            ⏱ This code expires in <strong>15 minutes</strong>
+          </p>
+        </div>
+
+        <div style="background:#FFF8F3;border-left:4px solid #F97316;border-radius:0 8px 8px 0;padding:12px 16px;margin:0 0 24px;">
+          <p style="margin:0;color:#444;font-size:13px;line-height:1.6;">
+            🔒 <strong>Security tip:</strong> Never share this code with anyone.
+            ShopFresherz will never ask for your OTP via call or message.
+          </p>
+        </div>
+
+        <p style="color:#888;font-size:13px;text-align:center;margin:0;">
+          Didn't request this? You can safely ignore this email.
+        </p>
+        """;
+
+    private static string PasswordResetBody(string firstName, string otp) =>
+        $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="width:64px;height:64px;background:#FEF2F2;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:28px;">🔑</span>
+          </div>
+          <h2 style="margin:0 0 8px;color:#111111;font-size:24px;font-weight:800;">
+            Reset Your Password
+          </h2>
+          <p style="margin:0;color:#666;font-size:15px;">
+            Use the code below to reset your password
+          </p>
+        </div>
+
+        <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:center;">
+          Hi {Encode(firstName)}, we received a request to reset your
+          ShopFresherz password. Use this code:
+        </p>
+
+        <!-- OTP BOX -->
+        <div style="background:linear-gradient(135deg,#FFF8F3,#FFF3E0);border:2px solid #FED7AA;border-radius:16px;padding:32px;text-align:center;margin:0 0 24px;">
+          <p style="margin:0 0 8px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;">
+            Password reset code
+          </p>
+          <div style="font-size:48px;font-weight:900;color:#F97316;letter-spacing:12px;line-height:1;margin:8px 0;">
+            {Encode(otp)}
+          </div>
+          <p style="margin:12px 0 0;color:#888;font-size:13px;">
+            ⏱ Expires in <strong>15 minutes</strong>
+          </p>
+        </div>
+
+        <div style="background:#FEF2F2;border-left:4px solid #EF4444;border-radius:0 8px 8px 0;padding:12px 16px;margin:0 0 24px;">
+          <p style="margin:0;color:#444;font-size:13px;line-height:1.6;">
+            ⚠️ <strong>Not you?</strong> If you did not request a password reset,
+            please ignore this email. Your password will not change.
+          </p>
+        </div>
+
+        <p style="color:#888;font-size:13px;text-align:center;margin:0;">
+          Need help? Contact us on
+          <a href="https://wa.me/2349075308722" style="color:#F97316;text-decoration:none;font-weight:600;">
+            WhatsApp
+          </a>
+        </p>
+        """;
+
+    private static string OrderConfirmationBody(string firstName, string orderNumber, decimal total, string paymentMethod, string? phone)
+    {
+        string phoneRow = string.IsNullOrWhiteSpace(phone)
+            ? string.Empty
+            : $"""
+              <tr>
+                <td style="color:#666;font-size:14px;padding:6px 0;">Phone Number</td>
+                <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                  {Encode(phone)}
+                </td>
+              </tr>
+              """;
+
+        return $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="width:64px;height:64px;background:#F0FDF4;border:2px solid #86EFAC;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:28px;">✅</span>
+          </div>
+          <h2 style="margin:0 0 8px;color:#111111;font-size:24px;font-weight:800;">
+            Order Confirmed!
+          </h2>
+          <div style="display:inline-block;background:#FFF3E0;border:1px solid #FED7AA;border-radius:20px;padding:6px 20px;margin-top:8px;">
+            <span style="color:#F97316;font-size:14px;font-weight:700;">{Encode(orderNumber)}</span>
+          </div>
+        </div>
+
+        <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 24px;">
+          Hi {Encode(firstName)}, thank you for shopping with ShopFresherz!
+          Your order has been confirmed and is being processed.
+        </p>
+
+        <!-- ORDER SUMMARY BOX -->
+        <div style="background:#F8F8F8;border-radius:12px;padding:20px;margin:0 0 24px;">
+          <h3 style="margin:0 0 16px;color:#111;font-size:15px;font-weight:700;
+            border-bottom:1px solid #E5E5E5;padding-bottom:12px;">
+            Order Summary
+          </h3>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Total Amount</td>
+              <td style="color:#F97316;font-size:16px;font-weight:800;text-align:right;">
+                ₦{total:N2}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Payment Method</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(paymentMethod)}
+              </td>
+            </tr>
+            {phoneRow}
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Estimated Delivery</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                1-2 Business Days
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- NEXT STEPS -->
+        <div style="background:#FFF8F3;border:1px solid #FED7AA;border-radius:12px;padding:20px;margin:0 0 24px;">
+          <h3 style="margin:0 0 12px;color:#F97316;font-size:14px;font-weight:700;
+            text-transform:uppercase;letter-spacing:0.5px;">
+            What Happens Next?
+          </h3>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td style="padding:6px 0;color:#444;font-size:13px;line-height:1.6;">
+                📞 We'll call you within 2 hours to confirm your order
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;color:#444;font-size:13px;line-height:1.6;">
+                📦 Your order will be packed and dispatched within 24 hours
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;color:#444;font-size:13px;line-height:1.6;">
+                🚚 Delivery within 1-2 business days to your address
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;color:#444;font-size:13px;line-height:1.6;">
+                💬 SMS alert when your order is out for delivery
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align:center;">
+          <a href="https://shopfresherz.com/store"
+             style="display:inline-block;background:linear-gradient(135deg,#F97316,#EA580C);color:#FFFFFF;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:15px;font-weight:700;box-shadow:0 4px 15px rgba(249,115,22,0.3);">
+            Continue Shopping →
+          </a>
+        </div>
+        """;
+    }
+
+    private static string OrderShippedBody(string firstName, string orderNumber, string trackingNumber) =>
+        $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:28px;">🚚</span>
+          </div>
+          <h2 style="margin:0 0 8px;color:#111111;font-size:24px;font-weight:800;">
+            Your Order Is On Its Way
+          </h2>
+          <div style="display:inline-block;background:#FFF3E0;border:1px solid #FED7AA;border-radius:20px;padding:6px 20px;margin-top:8px;">
+            <span style="color:#F97316;font-size:14px;font-weight:700;">{Encode(orderNumber)}</span>
+          </div>
+        </div>
+
+        <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:center;">
+          Hi {Encode(firstName)}, your order has shipped and is heading your way.
+        </p>
+
+        <div style="background:#F8F8F8;border-radius:12px;padding:20px;text-align:center;margin:0 0 24px;">
+          <p style="margin:0 0 8px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;">
+            Tracking Number
+          </p>
+          <p style="margin:0;color:#111;font-size:18px;font-weight:800;">
+            {Encode(trackingNumber)}
+          </p>
+        </div>
+
+        <p style="color:#888;font-size:13px;text-align:center;margin:0;">
+          Questions? Contact us on
+          <a href="https://wa.me/2349075308722" style="color:#F97316;text-decoration:none;font-weight:600;">
+            WhatsApp
+          </a>
+        </p>
+        """;
+
+    private static string BackInStockBody(string firstName, string productName, string productSlug) =>
+        $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="width:64px;height:64px;background:#F0FDF4;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:28px;">📦</span>
+          </div>
+          <h2 style="margin:0 0 8px;color:#111111;font-size:24px;font-weight:800;">
+            Back In Stock!
+          </h2>
+        </div>
+
+        <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:center;">
+          Hi {Encode(firstName)}, good news — <strong>{Encode(productName)}</strong> is available again.
+        </p>
+
+        <div style="text-align:center;">
+          <a href="https://shopfresherz.com/products/{Uri.EscapeDataString(productSlug)}"
+             style="display:inline-block;background:linear-gradient(135deg,#F97316,#EA580C);color:#FFFFFF;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:15px;font-weight:700;box-shadow:0 4px 15px rgba(249,115,22,0.3);">
+            View Product →
+          </a>
+        </div>
+        """;
+
+    private static string TemplatedBody(string templateKey, object templateData) =>
+        $"""
+        <div style="text-align:center;margin-bottom:24px;">
+          <h2 style="margin:0 0 8px;color:#111111;font-size:22px;font-weight:800;">
+            {Encode(templateKey)}
+          </h2>
+        </div>
+        <pre style="background:#F8F8F8;border-radius:8px;padding:16px;color:#444;font-size:12px;overflow-x:auto;">{Encode(JsonSerializer.Serialize(templateData))}</pre>
+        """;
 
     private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 }

@@ -108,7 +108,12 @@ public sealed class LowStockDto
 /// <summary>Request payload for admin order status updates.</summary>
 public sealed class UpdateOrderStatusRequest
 {
-    public OrderStatus NewStatus { get; set; }
+    /// <summary>
+    /// Gets or sets the target status. Nullable so a missing/omitted value in the request
+    /// body is rejected explicitly rather than silently binding to <see cref="OrderStatus.Pending"/>
+    /// (enum value 0).
+    /// </summary>
+    public OrderStatus? NewStatus { get; set; }
     public string? TrackingNumber { get; set; }
 }
 

@@ -10,6 +10,7 @@ using ShopFresherz.Application.Features.Admin.Commands;
 using ShopFresherz.Application.Features.Admin.Queries;
 using ShopFresherz.Application.Features.Banners.Commands;
 using ShopFresherz.Application.Features.Banners.Queries;
+using ShopFresherz.Application.Features.Orders.Commands;
 using ShopFresherz.Domain.Interfaces.Services;
 using System.Security.Claims;
 using OrderDto = ShopFresherz.Application.Dtos.Order.OrderDto;
@@ -252,6 +253,34 @@ public sealed class AdminController : ControllerBase
         _ = _auditLog.LogAsync(
             GetUserId(),
             "UpdateOrderStatus",
+            "Order",
+            orderNumber,
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            cancellationToken: CancellationToken.None);
+
+        return NoContent();
+    }
+
+    /// <summary>Cancels an order on the admin's behalf, regardless of ownership.</summary>
+    [HttpPost("orders/{orderNumber}/cancel")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelOrder(
+        [FromRoute] string orderNumber,
+        CancellationToken cancellationToken)
+    {
+        Result<bool> result = await _mediator.Send(
+            new CancelOrderCommand(orderNumber, RequestingUserId: null), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapError(result.Error);
+        }
+
+        _ = _auditLog.LogAsync(
+            GetUserId(),
+            "CancelOrder",
             "Order",
             orderNumber,
             ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),

@@ -42,7 +42,7 @@ public sealed class ChatbotService : IChatbotService
             var m when m.Contains("price") || m.Contains("cost") =>
                 "You can check our product prices on the website. Is there a specific product you're interested in?",
             var m when m.Contains("shipping") || m.Contains("delivery") =>
-                "We offer nationwide delivery. Standard delivery takes 2-3 business days.",
+                "We offer nationwide delivery. Standard delivery takes 1-2 business days.",
             var m when m.Contains("hello") || m.Contains("hi") =>
                 "Hello! I'm ShopFresherz assistant. How can I help you today?",
             _ => "I'm here to help! You can ask me about orders, returns, shipping, or products."

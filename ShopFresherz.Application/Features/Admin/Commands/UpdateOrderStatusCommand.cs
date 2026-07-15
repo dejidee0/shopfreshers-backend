@@ -43,7 +43,12 @@ public sealed class UpdateOrderStatusCommandHandler
             return Error.NotFound("Order");
         }
 
-        OrderStatus newStatus = command.Request.NewStatus;
+        if (command.Request.NewStatus is null)
+        {
+            return Error.Validation("New status is required.");
+        }
+
+        OrderStatus newStatus = command.Request.NewStatus.Value;
 
         bool confirmsBankTransfer =
             order.PaymentMethod == PaymentMethod.BankTransfer &&
