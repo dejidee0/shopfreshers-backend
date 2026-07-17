@@ -183,13 +183,28 @@ internal sealed class EfOrderRepository : IOrderRepository
     {
         string yearPrefix = $"SFZ-{DateTime.UtcNow:yyyy}-";
 
-        // Count orders created this calendar year to derive the next sequence number.
-        DateTime yearStart = new DateTime(DateTime.UtcNow.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        int countThisYear = await _context.Orders
+        // Derive the next sequence number from the highest suffix actually in use this year,
+        // not a row count: a count-based scheme regenerates already-used numbers as soon as
+        // any order for the year is deleted (the count drops but past numbers were never freed),
+        // which caused every checkout to fail with a duplicate-key error once test orders were
+        // cleaned up in production.
+        List<string> existingNumbers = await _context.Orders
             .IgnoreQueryFilters()
-            .CountAsync(o => o.CreatedAt >= yearStart, cancellationToken);
+            .Where(o => o.OrderNumber.StartsWith(yearPrefix))
+            .Select(o => o.OrderNumber)
+            .ToListAsync(cancellationToken);
 
-        return $"{yearPrefix}{(countThisYear + 1):D5}";
+        int maxSequence = 0;
+        foreach (string number in existingNumbers)
+        {
+            string suffix = number.Length > yearPrefix.Length ? number[yearPrefix.Length..] : string.Empty;
+            if (int.TryParse(suffix, out int sequence) && sequence > maxSequence)
+            {
+                maxSequence = sequence;
+            }
+        }
+
+        return $"{yearPrefix}{(maxSequence + 1):D5}";
     }
 
     /// <inheritdoc />
