@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using ShopFresherz.Application.Common;
@@ -29,15 +30,18 @@ public sealed class ConfirmOrderCommandHandler
     private readonly IUnitOfWork _uow;
     private readonly IFlutterwavePaymentService _flutterwave;
     private readonly IOrderPaymentConfirmationService _paymentConfirmation;
+    private readonly IEmailService _email;
 
     public ConfirmOrderCommandHandler(
         IUnitOfWork uow,
         IFlutterwavePaymentService flutterwave,
-        IOrderPaymentConfirmationService paymentConfirmation)
+        IOrderPaymentConfirmationService paymentConfirmation,
+        IEmailService email)
     {
         _uow = uow;
         _flutterwave = flutterwave;
         _paymentConfirmation = paymentConfirmation;
+        _email = email;
     }
 
     /// <inheritdoc />
@@ -133,10 +137,39 @@ public sealed class ConfirmOrderCommandHandler
             return completion.Error;
         }
 
+        User? orderUser = order.UserId.HasValue
+            ? await _uow.Users.GetByIdAsync(order.UserId.Value, cancellationToken)
+            : null;
+        _ = _email.SendAdminOrderNotificationAsync(
+            order.OrderNumber,
+            orderUser is not null ? $"{orderUser.FirstName} {orderUser.LastName}".Trim() : "Guest",
+            orderUser?.Email ?? order.GuestEmail ?? string.Empty,
+            orderUser?.Phone ?? ExtractPhoneFromAddressJson(order.DeliveryAddressJson) ?? string.Empty,
+            order.Total,
+            nameof(PaymentMethod.Card),
+            order.DeliveryAddressJson,
+            CancellationToken.None);
+
         return Result<ConfirmOrderResponse>.Success(new ConfirmOrderResponse
         {
             OrderNumber = order.OrderNumber,
         });
+    }
+
+    /// <summary>Extracts the "Phone" property from a checkout delivery-address JSON snapshot, if present.</summary>
+    private static string? ExtractPhoneFromAddressJson(string deliveryAddressJson)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(deliveryAddressJson);
+            return doc.RootElement.TryGetProperty("Phone", out JsonElement phone)
+                ? phone.GetString()
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Cancels a Draft order and releases the stock reserved at initiate-payment.</summary>

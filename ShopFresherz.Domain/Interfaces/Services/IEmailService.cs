@@ -26,6 +26,21 @@ public interface IEmailService
         string? phone = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Sends a new-order notification to the store's admin inbox. Fire-and-forget from the
+    /// caller's perspective — implementations must never let a send failure propagate, so a
+    /// broken email provider can never block order placement.
+    /// </summary>
+    Task SendAdminOrderNotificationAsync(
+        string orderNumber,
+        string customerName,
+        string customerEmail,
+        string customerPhone,
+        decimal total,
+        string paymentMethod,
+        string deliveryAddressJson,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Sends an order shipped notification with tracking number.</summary>
     Task SendOrderShippedAsync(string toEmail, string firstName, string orderNumber, string trackingNumber, CancellationToken cancellationToken = default);
 

@@ -13,6 +13,7 @@ namespace ShopFresherz.Infrastructure.Services;
 public sealed class BrevoEmailService : IEmailService
 {
     private const string Endpoint = "https://api.brevo.com/v3/smtp/email";
+    private const string AdminNotificationEmail = "info@shopfresherz.com";
 
     private readonly HttpClient _http;
     private readonly BrevoSettings _settings;
@@ -52,6 +53,23 @@ public sealed class BrevoEmailService : IEmailService
         string subject = $"Order Confirmed — {orderNumber} 🎉";
         return SendAsync(toEmail, firstName, subject,
             Wrap(subject, OrderConfirmationBody(firstName, orderNumber, total, paymentMethod, deliveryMethod, estimatedDelivery, phone)),
+            cancellationToken);
+    }
+
+    public Task SendAdminOrderNotificationAsync(
+        string orderNumber,
+        string customerName,
+        string customerEmail,
+        string customerPhone,
+        decimal total,
+        string paymentMethod,
+        string deliveryAddressJson,
+        CancellationToken cancellationToken = default)
+    {
+        string subject = $"New Order — {orderNumber} ({paymentMethod})";
+        return SendAsync(AdminNotificationEmail, "ShopFresherz Admin", subject,
+            Wrap(subject, AdminOrderNotificationBody(
+                orderNumber, customerName, customerEmail, customerPhone, total, paymentMethod, deliveryAddressJson)),
             cancellationToken);
     }
 
@@ -465,6 +483,125 @@ public sealed class BrevoEmailService : IEmailService
           </a>
         </div>
         """;
+    }
+
+    private static string AdminOrderNotificationBody(
+        string orderNumber,
+        string customerName,
+        string customerEmail,
+        string customerPhone,
+        decimal total,
+        string paymentMethod,
+        string deliveryAddressJson)
+    {
+        string deliveryAddress = FormatDeliveryAddress(deliveryAddressJson);
+
+        return $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="width:64px;height:64px;background:#EFF6FF;border:2px solid #93C5FD;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:28px;">🛎️</span>
+          </div>
+          <h2 style="margin:0 0 8px;color:#111111;font-size:24px;font-weight:800;">
+            New Order Received
+          </h2>
+          <div style="display:inline-block;background:#FFF3E0;border:1px solid #FED7AA;border-radius:20px;padding:6px 20px;margin-top:8px;">
+            <span style="color:#F97316;font-size:14px;font-weight:700;">{Encode(orderNumber)}</span>
+          </div>
+        </div>
+
+        <div style="background:#F8F8F8;border-radius:12px;padding:20px;margin:0 0 24px;">
+          <h3 style="margin:0 0 16px;color:#111;font-size:15px;font-weight:700;
+            border-bottom:1px solid #E5E5E5;padding-bottom:12px;">
+            Order Details
+          </h3>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Total Amount</td>
+              <td style="color:#F97316;font-size:16px;font-weight:800;text-align:right;">
+                ₦{total:N2}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Payment Method</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(paymentMethod)}
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background:#F8F8F8;border-radius:12px;padding:20px;margin:0 0 24px;">
+          <h3 style="margin:0 0 16px;color:#111;font-size:15px;font-weight:700;
+            border-bottom:1px solid #E5E5E5;padding-bottom:12px;">
+            Customer
+          </h3>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Name</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(string.IsNullOrWhiteSpace(customerName) ? "Guest" : customerName)}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Email</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(string.IsNullOrWhiteSpace(customerEmail) ? "—" : customerEmail)}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Phone</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(string.IsNullOrWhiteSpace(customerPhone) ? "—" : customerPhone)}
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background:#F8F8F8;border-radius:12px;padding:20px;margin:0 0 24px;">
+          <h3 style="margin:0 0 16px;color:#111;font-size:15px;font-weight:700;
+            border-bottom:1px solid #E5E5E5;padding-bottom:12px;">
+            Delivery Address
+          </h3>
+          <p style="margin:0;color:#111;font-size:14px;line-height:1.6;">
+            {Encode(deliveryAddress)}
+          </p>
+        </div>
+        """;
+    }
+
+    /// <summary>
+    /// Parses the checkout delivery-address JSON snapshot (Label/Line1/Line2/City/State/PostalCode)
+    /// into a single readable line for admin-facing emails. Never throws — malformed or missing
+    /// data falls back to a placeholder so a bad snapshot can't break the notification.
+    /// </summary>
+    private static string FormatDeliveryAddress(string deliveryAddressJson)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(deliveryAddressJson);
+            JsonElement root = doc.RootElement;
+
+            string Get(string name) =>
+                root.TryGetProperty(name, out JsonElement value) ? value.GetString() ?? string.Empty : string.Empty;
+
+            List<string> parts = new();
+            void AddIfPresent(string value)
+            {
+                if (!string.IsNullOrWhiteSpace(value)) parts.Add(value);
+            }
+
+            AddIfPresent(Get("Label"));
+            AddIfPresent(Get("Line1"));
+            AddIfPresent(Get("Line2"));
+            AddIfPresent(string.Join(", ", new[] { Get("City"), Get("State") }.Where(s => !string.IsNullOrWhiteSpace(s))));
+            AddIfPresent(Get("PostalCode"));
+
+            return parts.Count > 0 ? string.Join(", ", parts) : "Address unavailable";
+        }
+        catch (JsonException)
+        {
+            return "Address unavailable";
+        }
     }
 
     private static string OrderShippedBody(string firstName, string orderNumber, string trackingNumber) =>

@@ -89,6 +89,24 @@ public sealed class SendGridEmailService : IEmailService
     }
 
     /// <inheritdoc />
+    public async Task SendAdminOrderNotificationAsync(
+        string orderNumber,
+        string customerName,
+        string customerEmail,
+        string customerPhone,
+        decimal total,
+        string paymentMethod,
+        string deliveryAddressJson,
+        CancellationToken cancellationToken = default)
+    {
+        const string adminEmail = "info@shopfresherz.com";
+        string subject = $"New Order — {orderNumber} ({paymentMethod})";
+        string body = $"New order placed.<br/><br/>Order: <strong>{orderNumber}</strong><br/>Total: <strong>₦{total:N2}</strong><br/>Payment method: <strong>{paymentMethod}</strong><br/><br/>Customer: <strong>{customerName}</strong><br/>Email: {customerEmail}<br/>Phone: {customerPhone}";
+
+        await SendAsync(adminEmail, "ShopFresherz Admin", subject, body, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task SendOrderShippedAsync(string toEmail, string firstName, string orderNumber, string trackingNumber, CancellationToken cancellationToken = default)
     {
         string subject = $"Your Order {orderNumber} Has Shipped";

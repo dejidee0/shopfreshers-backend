@@ -29,15 +29,18 @@ public sealed class InitiatePaymentCommandHandler
     private readonly IUnitOfWork _uow;
     private readonly IFlutterwavePaymentService _flutterwave;
     private readonly IBankTransferDetailsProvider _bankTransferDetails;
+    private readonly IEmailService _email;
 
     public InitiatePaymentCommandHandler(
         IUnitOfWork uow,
         IFlutterwavePaymentService flutterwave,
-        IBankTransferDetailsProvider bankTransferDetails)
+        IBankTransferDetailsProvider bankTransferDetails,
+        IEmailService email)
     {
         _uow = uow;
         _flutterwave = flutterwave;
         _bankTransferDetails = bankTransferDetails;
+        _email = email;
     }
 
     /// <inheritdoc />
@@ -257,6 +260,13 @@ public sealed class InitiatePaymentCommandHandler
 
         if (req.PaymentMethod == PaymentMethod.PayOnDelivery)
         {
+            _ = _email.SendOrderConfirmationAsync(
+                customerEmail, customerName, orderNumber, total, nameof(PaymentMethod.PayOnDelivery),
+                order.DeliveryMethod, order.EstimatedDelivery, customerPhone, CancellationToken.None);
+            _ = _email.SendAdminOrderNotificationAsync(
+                orderNumber, customerName, customerEmail, customerPhone,
+                total, nameof(PaymentMethod.PayOnDelivery), addressJson, CancellationToken.None);
+
             return Result<InitiatePaymentResponse>.Success(new InitiatePaymentResponse
             {
                 PendingOrderId = order.Id,
@@ -269,6 +279,14 @@ public sealed class InitiatePaymentCommandHandler
         if (req.PaymentMethod == PaymentMethod.BankTransfer)
         {
             BankTransferDetails details = _bankTransferDetails.GetDetails();
+
+            _ = _email.SendOrderConfirmationAsync(
+                customerEmail, customerName, orderNumber, total, nameof(PaymentMethod.BankTransfer),
+                order.DeliveryMethod, order.EstimatedDelivery, customerPhone, CancellationToken.None);
+            _ = _email.SendAdminOrderNotificationAsync(
+                orderNumber, customerName, customerEmail, customerPhone,
+                total, nameof(PaymentMethod.BankTransfer), addressJson, CancellationToken.None);
+
             return Result<InitiatePaymentResponse>.Success(new InitiatePaymentResponse
             {
                 PendingOrderId = order.Id,
