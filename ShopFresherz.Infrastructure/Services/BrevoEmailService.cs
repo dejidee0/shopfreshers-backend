@@ -56,7 +56,7 @@ public sealed class BrevoEmailService : IEmailService
             cancellationToken);
     }
 
-    public Task SendAdminOrderNotificationAsync(
+    public async Task SendAdminOrderNotificationAsync(
         string orderNumber,
         string customerName,
         string customerEmail,
@@ -67,10 +67,27 @@ public sealed class BrevoEmailService : IEmailService
         CancellationToken cancellationToken = default)
     {
         string subject = $"New Order — {orderNumber} ({paymentMethod})";
-        return SendAsync(AdminNotificationEmail, "ShopFresherz Admin", subject,
-            Wrap(subject, AdminOrderNotificationBody(
-                orderNumber, customerName, customerEmail, customerPhone, total, paymentMethod, deliveryAddressJson)),
-            cancellationToken);
+
+        // Build the body in its own try/catch so a failure here — malformed delivery-address
+        // JSON, an unexpected field type, or anything else in this synchronous construction
+        // path — can never throw into the caller before SendAsync (and its own catch-all)
+        // even gets a chance to run. Falls back to a body without the address section rather
+        // than skipping the admin notification entirely.
+        string body;
+        try
+        {
+            body = Wrap(subject, AdminOrderNotificationBody(
+                orderNumber, customerName, customerEmail, customerPhone, total, paymentMethod, deliveryAddressJson));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to build admin order-notification body for order {OrderNumber}; sending a fallback notification instead.",
+                orderNumber);
+            body = Wrap(subject, AdminOrderNotificationFallbackBody(orderNumber, customerName, customerEmail, customerPhone, total, paymentMethod));
+        }
+
+        await SendAsync(AdminNotificationEmail, "ShopFresherz Admin", subject, body, cancellationToken);
     }
 
     public Task SendOrderShippedAsync(string toEmail, string firstName, string orderNumber, string trackingNumber, CancellationToken cancellationToken = default) =>
@@ -570,6 +587,67 @@ public sealed class BrevoEmailService : IEmailService
     }
 
     /// <summary>
+    /// Degraded admin order-notification body used when <see cref="AdminOrderNotificationBody"/>
+    /// itself fails to build (e.g. an unexpected error unrelated to the address JSON). Omits the
+    /// delivery-address section entirely rather than risk repeating whatever failed.
+    /// </summary>
+    private static string AdminOrderNotificationFallbackBody(
+        string orderNumber,
+        string customerName,
+        string customerEmail,
+        string customerPhone,
+        decimal total,
+        string paymentMethod) =>
+        $"""
+        <div style="text-align:center;margin-bottom:32px;">
+          <h2 style="margin:0 0 8px;color:#111111;font-size:24px;font-weight:800;">
+            New Order Received
+          </h2>
+          <div style="display:inline-block;background:#FFF3E0;border:1px solid #FED7AA;border-radius:20px;padding:6px 20px;margin-top:8px;">
+            <span style="color:#F97316;font-size:14px;font-weight:700;">{Encode(orderNumber)}</span>
+          </div>
+        </div>
+
+        <div style="background:#F8F8F8;border-radius:12px;padding:20px;margin:0 0 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Total Amount</td>
+              <td style="color:#F97316;font-size:16px;font-weight:800;text-align:right;">
+                ₦{total:N2}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Payment Method</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(paymentMethod)}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Name</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(string.IsNullOrWhiteSpace(customerName) ? "Guest" : customerName)}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Email</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(string.IsNullOrWhiteSpace(customerEmail) ? "—" : customerEmail)}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#666;font-size:14px;padding:6px 0;">Phone</td>
+              <td style="color:#111;font-size:14px;font-weight:600;text-align:right;">
+                {Encode(string.IsNullOrWhiteSpace(customerPhone) ? "—" : customerPhone)}
+              </td>
+            </tr>
+          </table>
+          <p style="margin:12px 0 0;color:#888;font-size:12px;">
+            Delivery address unavailable — check the order in admin for details.
+          </p>
+        </div>
+        """;
+
+    /// <summary>
     /// Parses the checkout delivery-address JSON snapshot (Label/Line1/Line2/City/State/PostalCode)
     /// into a single readable line for admin-facing emails. Never throws — malformed or missing
     /// data falls back to a placeholder so a bad snapshot can't break the notification.
@@ -598,8 +676,11 @@ public sealed class BrevoEmailService : IEmailService
 
             return parts.Count > 0 ? string.Join(", ", parts) : "Address unavailable";
         }
-        catch (JsonException)
+        catch (Exception)
         {
+            // Catches JsonException (malformed JSON) as well as InvalidOperationException
+            // (a field present but holding a non-string JSON value, e.g. a number) and any
+            // other parsing surprise — this must never throw into its caller.
             return "Address unavailable";
         }
     }
