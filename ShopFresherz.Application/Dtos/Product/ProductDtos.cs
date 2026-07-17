@@ -300,6 +300,12 @@ public sealed class CreateProductRequest
 
     /// <summary>Gets or sets the image URLs (array of strings).</summary>
     public List<string> ImageUrls { get; set; } = new List<string>();
+
+    /// <summary>Gets or sets the initial average rating to seed before real reviews arrive (0-5).</summary>
+    public decimal InitialRating { get; set; } = 0;
+
+    /// <summary>Gets or sets the initial review count to seed before real reviews arrive.</summary>
+    public int InitialReviewCount { get; set; } = 0;
 }
 
 /// <summary>Request payload for updating an existing product (admin). All fields optional.</summary>
@@ -369,6 +375,12 @@ public sealed class UpdateProductRequest
 
     /// <summary>Gets or sets the updated SEO meta description.</summary>
     public string? MetaDescription { get; set; }
+
+    /// <summary>Gets or sets the initial average rating to seed before real reviews arrive (0-5).</summary>
+    public decimal InitialRating { get; set; } = 0;
+
+    /// <summary>Gets or sets the initial review count to seed before real reviews arrive.</summary>
+    public int InitialReviewCount { get; set; } = 0;
 }
 
 /// <summary>Converts nullable GUID JSON values while treating blank strings as null.</summary>

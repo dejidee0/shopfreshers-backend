@@ -64,6 +64,8 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
             // Persist meta SEO fields only if/when the DTO supports them.
 
             ImageUrls = req.ImageUrls, // Set the image URLs
+            AverageRating = req.InitialRating,
+            ReviewCount = req.InitialReviewCount,
         };
 
         await _uow.Products.AddAsync(product, cancellationToken);
@@ -100,6 +102,8 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
         RuleFor(x => x.Request.CategoryId).GreaterThan(0);
         RuleFor(x => x.Request.Price).GreaterThan(0);
         RuleFor(x => x.Request.StockQty).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Request.InitialRating).InclusiveBetween(0, 5)
+            .WithMessage("InitialRating must be between 0 and 5.");
 
         // imageUrls: Array of Strings (URLs)
         RuleFor(x => x.Request.ImageUrls)

@@ -99,6 +99,7 @@ public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Re
 
         // Fire-and-forget email (do not await to avoid blocking checkout).
         _ = _emailService.SendOtpAsync(user.Email, user.FirstName, otp, CancellationToken.None);
+        _ = _emailService.SendWelcomeAsync(user.Email, user.FirstName, CancellationToken.None);
         if (!string.IsNullOrWhiteSpace(user.Phone))
         {
             _ = _smsService.SendOtpAsync(user.Phone, otp, CancellationToken.None);

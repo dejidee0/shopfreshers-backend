@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using ShopFresherz.Application.Common;
 using ShopFresherz.Application.Dtos.Product;
@@ -56,6 +57,9 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         if (req.MetaTitle    is not null) product.MetaTitle        = req.MetaTitle;
         if (req.MetaDescription is not null) product.MetaDescription = req.MetaDescription;
 
+        if (req.InitialRating > 0) product.AverageRating = req.InitialRating;
+        if (req.InitialReviewCount > 0) product.ReviewCount = req.InitialReviewCount;
+
         if (req.Slug is not null)
         {
             string newSlug = req.Slug.Trim().ToLowerInvariant();
@@ -74,5 +78,16 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         _ = Task.Run(() => _search.IndexProductAsync(doc, CancellationToken.None), CancellationToken.None);
 
         return Result<bool>.Success(true);
+    }
+}
+
+/// <summary>Validator for <see cref="UpdateProductCommand"/>.</summary>
+public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
+{
+    /// <summary>Initialises validation rules.</summary>
+    public UpdateProductCommandValidator()
+    {
+        RuleFor(x => x.Request.InitialRating).InclusiveBetween(0, 5)
+            .WithMessage("InitialRating must be between 0 and 5.");
     }
 }
